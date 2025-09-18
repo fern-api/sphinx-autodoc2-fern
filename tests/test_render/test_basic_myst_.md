@@ -1,6 +1,6 @@
 # {py:mod}`package`
 
-```{py:module} package
+```Fer package
 ```
 
 ```{autodoc2-docstring} package
