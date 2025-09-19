@@ -6,9 +6,9 @@ build-backend = "flit_core.buildapi"
 name = "autodoc2"
 
 [project]
-name = "sphinx-autodoc2"
+name = "sphinx-autodoc2-fern"
 dynamic = ["version", "description"]
-authors = [{name = "Chris Sewell", email = "chrisj_sewell@hotmail.com"}]
+authors = [{name = "Ryan Paul", email = "your-email@example.com"}]
 license = {file = "LICENSE"}
 classifiers = [
     "License :: OSI Approved :: MIT License",
@@ -16,8 +16,8 @@ classifiers = [
     "Framework :: Sphinx :: Extension",
 ]
 readme = "README.md"
-keywords = ["sphinx", "autodoc", "extension", "documentation"]
-urls = {Home = "https://github.com/chrisjsewell/sphinx-autodoc2"}
+keywords = ["sphinx", "autodoc", "extension", "documentation", "fern", "api"]
+urls = {Home = "https://github.com/fern-api/sphinx-autodoc2-fern"}
 requires-python = ">=3.8"
 dependencies = [
     "astroid>=2.7,<4",
