@@ -145,8 +145,7 @@ class FernRenderer(RendererBase):
             yield ""
             for child in children_by_type["package"]:
                 name = child["full_name"].split(".")[-1]
-                # Convert to hyphenated format for cross-page link (matches file slug)
-                link_path = child["full_name"].replace('.', '-').replace('_', '-')
+                link_path = child["full_name"]
                 doc_summary = child.get('doc', '').split('\n')[0][:80] if child.get('doc') else ""
                 if len(child.get('doc', '')) > 80:
                     doc_summary += "..."
@@ -158,8 +157,7 @@ class FernRenderer(RendererBase):
             yield ""
             for child in children_by_type["module"]:
                 name = child["full_name"].split(".")[-1]
-                # Convert to hyphenated format for cross-page link (matches file slug)
-                link_path = child["full_name"].replace('.', '-').replace('_', '-')
+                link_path = child["full_name"]
                 doc_summary = child.get('doc', '').split('\n')[0][:80] if child.get('doc') else ""
                 if len(child.get('doc', '')) > 80:
                     doc_summary += "..."
@@ -722,15 +720,13 @@ class FernRenderer(RendererBase):
         """Get the relative file path for an item.
         
         This generates the path that will be used in the navigation YAML.
-        Converts Python module names to hyphenated filenames.
-        For example: 'my_package.submodule' -> './my-package-submodule.md'
+        Uses the Python module name directly as the filename.
+        For example: 'my_package.submodule' -> './my_package.submodule.md'
         
         :param full_name: The fully qualified name of the item
         :return: The relative file path
         """
-        # Convert dots and underscores to hyphens for filename
-        filename = full_name.replace('.', '-').replace('_', '-')
-        return f"./{filename}{self.EXTENSION}"
+        return f"./{full_name}{self.EXTENSION}"
 
     def build_navigation_tree(self) -> list[dict[str, t.Any]]:
         """Build a hierarchical navigation tree from tracked items.
