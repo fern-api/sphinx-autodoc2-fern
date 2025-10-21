@@ -40,8 +40,6 @@ class FernRenderer(RendererBase):
         if type_ in ("package", "module"):
             yield "---"
             yield "layout: overview"
-            slug = self._generate_slug(full_name)
-            yield f"slug: {slug}"
             yield "---"
             yield ""
         
@@ -711,16 +709,6 @@ class FernRenderer(RendererBase):
         
         return escaped_content
 
-    def _generate_slug(self, full_name: str) -> str:
-        """Generate a slug for a page from its full name.
-        
-        Converts dots and underscores to hyphens for URL-friendly slugs.
-        
-        :param full_name: The fully qualified name
-        :return: The slug
-        """
-        return full_name.replace('.', '-').replace('_', '-')
-
     def _track_navigation_item(self, item: ItemData) -> None:
         """Track an item for navigation generation.
         
@@ -737,7 +725,6 @@ class FernRenderer(RendererBase):
             "type": type_,
             "description": description,
             "file_path": self._get_file_path_for_item(full_name),
-            "slug": self._generate_slug(full_name),
         }
         self._navigation_items.append(nav_item)
 
@@ -807,8 +794,8 @@ class FernRenderer(RendererBase):
                     }
                     
                     section_item["contents"].append({
-                        "page": "Overview",
-                        "slug": item["slug"]
+                        "page": full_name,
+                        "path": item["file_path"]
                     })
                     
                     child_nav = tree_to_nav(children, full_name)
@@ -817,8 +804,8 @@ class FernRenderer(RendererBase):
                     nav_items.append(section_item)
                 else:
                     page_item = {
-                        "page": short_name,
-                        "slug": item["slug"]
+                        "page": full_name,
+                        "path": item["file_path"]
                     }
                     nav_items.append(page_item)
             

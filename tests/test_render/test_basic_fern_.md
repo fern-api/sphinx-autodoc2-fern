@@ -1,6 +1,5 @@
 ---
 layout: overview
-slug: package
 ---
 
 # package
