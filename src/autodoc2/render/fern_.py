@@ -732,13 +732,15 @@ class FernRenderer(RendererBase):
         """Get the relative file path for an item.
         
         This generates the path that will be used in the navigation YAML.
-        For example: 'my_package.submodule' -> './pages/api-reference/my_package.submodule.md'
+        Converts Python module names to hyphenated filenames.
+        For example: 'my_package.submodule' -> './my-package-submodule.md'
         
         :param full_name: The fully qualified name of the item
         :return: The relative file path
         """
-        # Convert dots to path separators and add extension
-        return f"./pages/api-reference/{full_name}{self.EXTENSION}"
+        # Convert dots and underscores to hyphens for filename
+        filename = full_name.replace('.', '-').replace('_', '-')
+        return f"./{filename}{self.EXTENSION}"
 
     def build_navigation_tree(self) -> list[dict[str, t.Any]]:
         """Build a hierarchical navigation tree from tracked items.
