@@ -288,7 +288,13 @@ def write(
                 content = "\n".join(
                     render_class(db, config, warn=_warn).render_item(mod_name)
                 )
-            out_path = output / (mod_name + render_class.EXTENSION)
+            
+            if renderer == "fern":
+                filename = mod_name.replace('.', '-').replace('_', '-')
+                out_path = output / (filename + render_class.EXTENSION)
+            else:
+                out_path = output / (mod_name + render_class.EXTENSION)
+            
             paths.append(out_path)
             if out_path.exists() and out_path.read_text("utf8") == content:
                 continue
