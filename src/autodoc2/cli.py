@@ -199,6 +199,11 @@ def write(
     output: Path = typer.Option("_autodoc", help="Folder to write to"),
     clean: bool = typer.Option(False, "-c", "--clean", help="Remove old files"),
     renderer: str = typer.Option("fern", "-r", "--renderer", help="Renderer to use: fern, rst, myst"),
+    nav_output: t.Optional[Path] = typer.Option(
+        None,
+        "--nav-output",
+        help="Path to write navigation YAML file (Fern renderer only)",
+    ),
 ) -> None:
     """Create sphinx files for a python module or package."""
     # gather the module
@@ -260,7 +265,7 @@ def write(
         # Set renderer based on CLI option
         if renderer == "rst":
             from autodoc2.render.rst_ import RstRenderer
-            render_class = RstRenderer
+            render_class: t.Any = RstRenderer
         elif renderer == "myst":
             from autodoc2.render.myst_ import MystRenderer
             render_class = MystRenderer
@@ -271,18 +276,30 @@ def write(
             console.print(f"[red]Error[/red] Unknown renderer: {renderer}")
             raise typer.Exit(1)
         
+        fern_renderer: t.Any = None
+        if renderer == "fern":
+            fern_renderer = render_class(db, config, warn=_warn)
+        
         for mod_name in to_write:
             progress.update(task, advance=1, description=mod_name)
-            content = "\n".join(
-                render_class(db, config, warn=_warn).render_item(mod_name)
-            )
+            if fern_renderer:
+                content = "\n".join(fern_renderer.render_item(mod_name))
+            else:
+                content = "\n".join(
+                    render_class(db, config, warn=_warn).render_item(mod_name)
+                )
             out_path = output / (mod_name + render_class.EXTENSION)
             paths.append(out_path)
             if out_path.exists() and out_path.read_text("utf8") == content:
-                # Don't write the file if it hasn't changed
-                # this means that sphinx doesn't mark it for rebuild (mtime based)
                 continue
             out_path.write_text(content, "utf8")
+        
+        if nav_output and fern_renderer:
+            nav_yaml = fern_renderer.generate_navigation_yaml()
+            if nav_yaml:
+                nav_output.parent.mkdir(parents=True, exist_ok=True)
+                nav_output.write_text(nav_yaml, "utf8")
+                console.print(f"[green]Navigation YAML written[/green]: {nav_output}")
 
     # remove any files that are no longer needed
     if clean:

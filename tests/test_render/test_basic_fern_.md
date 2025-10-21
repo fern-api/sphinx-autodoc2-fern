@@ -1,72 +1,92 @@
-`package`
+---
+layout: overview
+slug: package
+---
+
+# package
 
 This is a test package.
+
+## Subpackages
+
+- **[`a`](a)** - This is a test module.
 
 ## Module Contents
 
 ### Classes
 
-[`Class`](#class) | This is a class.
+| Name | Description |
+|------|-------------|
+| [`Class`](#packageclass) | This is a class. |
 
 ### Functions
 
-[`func`](#func) | This is a function.
+| Name | Description |
+|------|-------------|
+| [`func`](#packagefunc) | This is a function. |
 
 ### Data
 
 `__all__`
 `p`
 
-## API
+### API
 
-### __all__
+```python
+package.__all__
+```
+
 **Value**: `['p', 'a1', 'alias']`
 
 
+```python
+package.p
+```
 
-### p
 **Value**: `1`
 
 p can be documented here.
 
-## func
 
 ```python
-def func(a: str, b: int) -> package.a.c.ac1
+package.func(
+    a: str, b: int
+) -> package.a.c.ac1
 ```
 
 This is a function.
 
 
-## Class
-
 ```python
-class Class
+class package.Class
 ```
 
 This is a class.
 
-### x
-**Type**: `int`
+```python
+x: int
+```
+
 **Value**: `1`
 
 x can be documented here.
 
-### method
 
 ```python
-def method(a: str, b: int) -> ...
+method(
+    a: str, b: int
+) -> ...
 ```
 
 This is a method.
 
 
-### prop: `package.a.c.ac1 | None`
+```python
+prop: package.a.c.ac1 | None
+```
 
 This is a property.
 
-
-### Nested
 
 ```python
 class Nested

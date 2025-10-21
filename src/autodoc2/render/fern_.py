@@ -19,6 +19,11 @@ class FernRenderer(RendererBase):
 
     EXTENSION = ".md"
 
+    def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
+        """Initialize the renderer with navigation tracking."""
+        super().__init__(*args, **kwargs)
+        self._navigation_items: list[dict[str, t.Any]] = []
+
     def render_item(self, full_name: str) -> t.Iterable[str]:
         """Render a single item by dispatching to the appropriate method."""
         item = self.get_item(full_name)
@@ -27,10 +32,16 @@ class FernRenderer(RendererBase):
         
         type_ = item["type"]
         
+        # Track this item for navigation generation (only packages and modules)
+        if type_ in ("package", "module"):
+            self._track_navigation_item(item)
+        
         # Add frontmatter for API reference pages (packages and modules)
         if type_ in ("package", "module"):
             yield "---"
             yield "layout: overview"
+            slug = self._generate_slug(full_name)
+            yield f"slug: {slug}"
             yield "---"
             yield ""
         
@@ -57,7 +68,6 @@ class FernRenderer(RendererBase):
 
     def render_function(self, item: ItemData) -> t.Iterable[str]:
         """Create the content for a function."""
-        short_name = item["full_name"].split(".")[-1]
         full_name = item["full_name"]
         show_annotations = self.show_annotations(item)
         
@@ -189,12 +199,12 @@ class FernRenderer(RendererBase):
                     doc_lines = child.get('doc', '').strip().split('\n')
                     if doc_lines and doc_lines[0]:
                         # Get first paragraph (until empty line or end)
-                        doc_summary = []
+                        class_doc_summary: list[str] = []
                         for line in doc_lines:
                             if not line.strip():
                                 break
-                            doc_summary.append(line.strip())
-                        description = ' '.join(doc_summary) if doc_summary else "None"
+                            class_doc_summary.append(line.strip())
+                        description = ' '.join(class_doc_summary) if class_doc_summary else "None"
                     else:
                         description = "None"
                     # Escape the description for Fern compatibility
@@ -218,12 +228,12 @@ class FernRenderer(RendererBase):
                     doc_lines = child.get('doc', '').strip().split('\n')
                     if doc_lines and doc_lines[0]:
                         # Get first paragraph (until empty line or end)
-                        doc_summary = []
+                        func_doc_summary: list[str] = []
                         for line in doc_lines:
                             if not line.strip():
                                 break
-                            doc_summary.append(line.strip())
-                        description = ' '.join(doc_summary) if doc_summary else "None"
+                            func_doc_summary.append(line.strip())
+                        description = ' '.join(func_doc_summary) if func_doc_summary else "None"
                     else:
                         description = "None"
                     # Escape the description for Fern compatibility
@@ -269,8 +279,6 @@ class FernRenderer(RendererBase):
             )
             sig += f"({args})"
 
-        # Class signature in code block (no header - code block IS the header)
-        full_name = item["full_name"]
         yield "```python"
         if constructor and "args" in constructor and args.strip():
             yield f"class {item['full_name']}({args})"
@@ -323,8 +331,6 @@ class FernRenderer(RendererBase):
             ):
                 continue
             
-            # Render each member with short names in code blocks
-            child_item = self.get_item(child["full_name"])
             child_lines = list(self.render_item(child["full_name"]))
             
             for line in child_lines:
@@ -343,9 +349,6 @@ class FernRenderer(RendererBase):
 
     def render_property(self, item: ItemData) -> t.Iterable[str]:
         """Create the content for a property."""
-        short_name = item["full_name"].split(".")[-1]
-        
-        # Property signature in code block (no header - code block IS the header)
         full_name = item["full_name"]
         yield "```python"
         if item.get("return_annotation"):
@@ -361,10 +364,7 @@ class FernRenderer(RendererBase):
         # Show decorators if any
         properties = item.get("properties", [])
         if properties:
-            decorator_list = []
-            for prop in ("abstractmethod", "classmethod"):
-                if prop in properties:
-                    decorator_list.append(f"`@{prop}`")
+            decorator_list = [f"`@{prop}`" for prop in ("abstractmethod", "classmethod") if prop in properties]
             if decorator_list:
                 content_lines.append(f"**Decorators**: {', '.join(decorator_list)}")
                 content_lines.append("")
@@ -413,7 +413,7 @@ class FernRenderer(RendererBase):
             # Handle Jinja templates like MyST does - use <Multiline-String> for complex templates
             if self._contains_jinja_template(value_str):
                 if len(value_str.splitlines()) > 1 or len(value_str) > 100:
-                    content_lines.append(f"**Value**: `<Multiline-String>`")
+                    content_lines.append("**Value**: `<Multiline-String>`")
                 else:
                     # Short templates - wrap in code block
                     content_lines.append("**Value**:")
@@ -426,7 +426,7 @@ class FernRenderer(RendererBase):
                 content_lines.append(f"**Value**: `{escaped_value}`")
         else:
             # Show None values explicitly like in HTML output
-            content_lines.append(f"**Value**: `None`")
+            content_lines.append("**Value**: `None`")
         
         if self.show_docstring(item):
             if content_lines:
@@ -472,7 +472,7 @@ class FernRenderer(RendererBase):
         lines = docstring.strip().split('\n')
         
         # Parse into sections
-        sections = {"description": [], "parameters": [], "returns": [], "raises": []}
+        sections: dict[str, list[str]] = {"description": [], "parameters": [], "returns": [], "raises": []}
         current_section = "description"
         
         i = 0
@@ -520,10 +520,7 @@ class FernRenderer(RendererBase):
         # Output formatted sections
         # Description first
         if sections["description"]:
-            desc_lines = []
-            for line in sections["description"]:
-                desc_lines.append(line)
-            desc_text = '\n'.join(desc_lines).strip()
+            desc_text = '\n'.join(sections["description"]).strip()
             if desc_text:
                 yield self._escape_fern_content(desc_text)
                 yield ""
@@ -535,12 +532,13 @@ class FernRenderer(RendererBase):
             # If we have function item data, use ParamField components
             if item and item.get("args"):
                 # Build parameter info map from function signature
-                param_info = {}
-                for prefix, name, annotation, default in item["args"]:
-                    param_info[name] = {
-                        "type": annotation,
-                        "default": default
-                    }
+                param_info: dict[str, dict[str, t.Any]] = {}
+                for _prefix, name, annotation, default in item["args"]:  # type: ignore[assignment]
+                    if name:
+                        param_info[name] = {
+                            "type": annotation,
+                            "default": default
+                        }
                 
                 # Render each parameter as ParamField
                 for line in sections["parameters"]:
@@ -611,7 +609,7 @@ class FernRenderer(RendererBase):
                     yield self._escape_fern_content(line.strip())
             yield ""
 
-    def _format_args_multiline(self, args_info, include_annotations: bool = True, ignore_self: str | None = None) -> str:
+    def _format_args_multiline(self, args_info: t.Any, include_annotations: bool = True, ignore_self: str | None = None) -> str:
         """Format function arguments with newlines for better readability."""
         if not args_info:
             return ""
@@ -670,13 +668,13 @@ class FernRenderer(RendererBase):
         # Convert NOTE: to Fern Note component
         note_pattern = r'^(\s*)(NOTE:\s*)(.*)'
         if match := re.match(note_pattern, line, re.IGNORECASE):
-            indent, prefix, content = match.groups()
+            indent, _prefix, content = match.groups()
             return f"{indent}<Note> {content.strip()} </Note>"
             
         # Convert WARNING: to Fern Warning component  
         warning_pattern = r'^(\s*)(WARNING:\s*)(.*)'
         if match := re.match(warning_pattern, line, re.IGNORECASE):
-            indent, prefix, content = match.groups()
+            indent, _prefix, content = match.groups()
             return f"{indent}<Warning> {content.strip()} </Warning>"
             
         return line
@@ -692,8 +690,8 @@ class FernRenderer(RendererBase):
         # First, find and temporarily replace HTML-like tags (including those with braces)
         # Pattern matches: <tag>, <{tag}>, <{answer_tag}>, </think>, etc.
         tag_pattern = r'<[^<>]*(?:\\?\{[^}]*\\?\}[^<>]*)*[^<>]*>'
-        tags = []
-        def replace_tag(match):
+        tags: list[str] = []
+        def replace_tag(match: t.Any) -> str:
             tag = match.group(0)
             placeholder = f"__FERN_TAG_{len(tags)}__"
             tags.append(tag)
@@ -712,3 +710,145 @@ class FernRenderer(RendererBase):
             escaped_content = escaped_content.replace(placeholder, f'`{escaped_tag}`')
         
         return escaped_content
+
+    def _generate_slug(self, full_name: str) -> str:
+        """Generate a slug for a page from its full name.
+        
+        Converts dots and underscores to hyphens for URL-friendly slugs.
+        
+        :param full_name: The fully qualified name
+        :return: The slug
+        """
+        return full_name.replace('.', '-').replace('_', '-')
+
+    def _track_navigation_item(self, item: ItemData) -> None:
+        """Track an item for navigation generation.
+        
+        :param item: The item to track (should be a package or module)
+        """
+        full_name = item["full_name"]
+        type_ = item["type"]
+        
+        doc = item.get('doc', '').strip()
+        description = doc.split('\n')[0] if doc else ""
+        
+        nav_item = {
+            "full_name": full_name,
+            "type": type_,
+            "description": description,
+            "file_path": self._get_file_path_for_item(full_name),
+            "slug": self._generate_slug(full_name),
+        }
+        self._navigation_items.append(nav_item)
+
+    def _get_file_path_for_item(self, full_name: str) -> str:
+        """Get the relative file path for an item.
+        
+        This generates the path that will be used in the navigation YAML.
+        For example: 'my_package.submodule' -> './pages/api-reference/my_package.submodule.md'
+        
+        :param full_name: The fully qualified name of the item
+        :return: The relative file path
+        """
+        # Convert dots to path separators and add extension
+        return f"./pages/api-reference/{full_name}{self.EXTENSION}"
+
+    def build_navigation_tree(self) -> list[dict[str, t.Any]]:
+        """Build a hierarchical navigation tree from tracked items.
+        
+        This creates a nested structure that matches Fern's navigation format:
+        - Top-level packages become sections
+        - Subpackages and modules become nested sections or pages
+        
+        :return: A list of navigation items in Fern format
+        """
+        if not self._navigation_items:
+            return []
+        
+        tree: dict[str, dict[str, t.Any]] = {}
+        
+        for item in self._navigation_items:
+            full_name = item["full_name"]
+            parts = full_name.split(".")
+            
+            current = tree
+            for i, part in enumerate(parts):
+                if part not in current:
+                    current[part] = {
+                        "_item": None,
+                        "_children": {}
+                    }
+                
+                if i == len(parts) - 1:
+                    current[part]["_item"] = item
+                
+                current = current[part]["_children"]
+        
+        # Convert tree to Fern navigation format
+        def tree_to_nav(node_dict: dict[str, dict[str, t.Any]], parent_name: str = "") -> list[dict[str, t.Any]]:
+            """Convert tree structure to Fern navigation format."""
+            nav_items = []
+            
+            for name in sorted(node_dict.keys()):
+                node = node_dict[name]
+                item = node["_item"]
+                children = node["_children"]
+                
+                if item is None:
+                    continue
+                
+                full_name = item["full_name"]
+                short_name = full_name.split(".")[-1]
+                
+                if children:
+                    section_item = {
+                        "section": short_name,
+                        "contents": []
+                    }
+                    
+                    section_item["contents"].append({
+                        "page": "Overview",
+                        "slug": item["slug"]
+                    })
+                    
+                    child_nav = tree_to_nav(children, full_name)
+                    section_item["contents"].extend(child_nav)
+                    
+                    nav_items.append(section_item)
+                else:
+                    page_item = {
+                        "page": short_name,
+                        "slug": item["slug"]
+                    }
+                    nav_items.append(page_item)
+            
+            return nav_items
+        
+        return tree_to_nav(tree)
+
+    def generate_navigation_yaml(self) -> str:
+        """Generate a YAML string for Fern navigation.
+        
+        This creates a navigation structure that can be saved to a file
+        and included in a Fern docs.yml file.
+        
+        :return: YAML string representing the navigation structure
+        """
+        import yaml
+        
+        nav_tree = self.build_navigation_tree()
+        
+        if not nav_tree:
+            return ""
+        
+        navigation_structure = {
+            "navigation": nav_tree
+        }
+        
+        # Generate YAML with proper formatting
+        return yaml.dump(
+            navigation_structure,
+            default_flow_style=False,
+            sort_keys=False,
+            allow_unicode=True
+        )
