@@ -145,8 +145,8 @@ class FernRenderer(RendererBase):
             yield ""
             for child in children_by_type["package"]:
                 name = child["full_name"].split(".")[-1]
-                # Create simple relative link using just the child name
-                link_path = name
+                # Convert to hyphenated format for cross-page link (matches file slug)
+                link_path = child["full_name"].replace('.', '-').replace('_', '-')
                 doc_summary = child.get('doc', '').split('\n')[0][:80] if child.get('doc') else ""
                 if len(child.get('doc', '')) > 80:
                     doc_summary += "..."
@@ -158,22 +158,12 @@ class FernRenderer(RendererBase):
             yield ""
             for child in children_by_type["module"]:
                 name = child["full_name"].split(".")[-1]
-                # Replace underscores with dashes in display text for better readability
-                display_name = name.replace('_', '-')
-                
-                # Create contextual link based on current page
-                current_parts = item["full_name"].split(".")
-                if len(current_parts) == 1:
-                    # On root page - use simple name
-                    link_path = display_name
-                else:
-                    # On subpackage page - use full filename (convert dots and underscores to dashes)
-                    link_path = child["full_name"].replace('.', '-').replace('_', '-')
-                    
+                # Convert to hyphenated format for cross-page link (matches file slug)
+                link_path = child["full_name"].replace('.', '-').replace('_', '-')
                 doc_summary = child.get('doc', '').split('\n')[0][:80] if child.get('doc') else ""
                 if len(child.get('doc', '')) > 80:
                     doc_summary += "..."
-                yield f"- **[`{display_name}`]({link_path})** - {doc_summary}" if doc_summary else f"- **[`{display_name}`]({link_path})**"
+                yield f"- **[`{name}`]({link_path})** - {doc_summary}" if doc_summary else f"- **[`{name}`]({link_path})**"
             yield ""
         
         # Show Module Contents summary if we have actual content (not just submodules)

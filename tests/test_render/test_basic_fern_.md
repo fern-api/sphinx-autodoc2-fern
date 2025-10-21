@@ -8,7 +8,7 @@ This is a test package.
 
 ## Subpackages
 
-- **[`a`](a)** - This is a test module.
+- **[`a`](package-a)** - This is a test module.
 
 ## Module Contents
 
