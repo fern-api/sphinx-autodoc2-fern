@@ -774,11 +774,10 @@ class FernRenderer(RendererBase):
                     continue
                 
                 full_name = item["full_name"]
-                short_name = full_name.split(".")[-1]
                 
                 if children:
                     section_item = {
-                        "section": short_name,
+                        "section": full_name,
                         "contents": []
                     }
                     
