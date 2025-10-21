@@ -522,10 +522,11 @@ class FernRenderer(RendererBase):
         
         # Parameters section
         if sections["parameters"]:
-            yield "**Parameters:**"
-            yield ""
             # If we have function item data, use ParamField components
             if item and item.get("args"):
+                yield "**Parameters:**"
+                yield ""
+                
                 # Build parameter info map from function signature
                 param_info = {}
                 for prefix, name, annotation, default in item["args"]:
