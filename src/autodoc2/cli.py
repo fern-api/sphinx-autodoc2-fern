@@ -290,7 +290,7 @@ def write(
                 )
             
             if renderer == "fern":
-                filename = mod_name.replace('.', '-').replace('_', '-')
+                filename = mod_name.replace('.', '_')
                 out_path = output / (filename + render_class.EXTENSION)
             else:
                 out_path = output / (mod_name + render_class.EXTENSION)
