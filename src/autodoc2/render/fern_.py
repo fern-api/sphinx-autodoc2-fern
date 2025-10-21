@@ -778,13 +778,9 @@ class FernRenderer(RendererBase):
                 if children:
                     section_item = {
                         "section": full_name,
+                        "path": item["file_path"],
                         "contents": []
                     }
-                    
-                    section_item["contents"].append({
-                        "page": full_name,
-                        "path": item["file_path"]
-                    })
                     
                     child_nav = tree_to_nav(children, full_name)
                     section_item["contents"].extend(child_nav)
