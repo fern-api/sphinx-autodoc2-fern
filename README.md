@@ -1,66 +1,27 @@
-# sphinx-autodoc-fern
+# sphinx-autodoc2-fern
 
-`sphinx-autodoc-fern` is a Sphinx extension that automatically generates API documentation for your Python packages with **Fern documentation format support**.
+Generate Fern-compatible API documentation from Python packages using static analysis.
 
-This is a fork of [`sphinx-autodoc2`](https://github.com/sphinx-extensions2/sphinx-autodoc2) that adds powerful [Fern](https://buildwithfern.com) documentation generation capabilities.
+Fork of [`sphinx-autodoc2`](https://github.com/sphinx-extensions2/sphinx-autodoc2) with [Fern](https://buildwithfern.com) output support.
 
-## 🆕 New Fern Features
-
-- **Fern-compatible Markdown output** - Generate documentation that works seamlessly with Fern
-- **Enhanced parameter formatting** - Uses Fern's ParamField components for better API documentation
-- **Smart callout handling** - Automatically converts NOTE: and WARNING: to Fern components
-- **Beautiful tables** - Improved formatting for classes, functions, and module contents
-
-Static analysis of Python code
-
-: There is no need to install your package to generate the documentation, and `sphinx-autodoc2` will correctly handle `if TYPE_CHECKING` blocks and other typing only features.
-: You can even document packages from outside the project (via `git clone`)!
-
-Optimized for rebuilds
-
-: Analysis of packages and file rendering are cached, so you can use `sphinx-autodoc2` in your development workflow.
-
-Support for `__all__`
-
-: `sphinx-autodoc2` can follow `__all__` variable, to only document the public API.
-
-Support for both `rst` and `md` docstrings
-
-: `sphinx-autodoc2` supports both `rst` and `md` ([MyST](https://myst-parser.readthedocs.io)) docstrings, which can be mixed within the same project.
-
-Highly configurable
-
-: `sphinx-autodoc-fern` is highly configurable, with many options to control the analysis and output of the documentation.
-
-Fern Documentation Format Support
-
-: Generate beautiful Fern-compatible documentation with enhanced formatting for parameters, callouts, and API references.
-
-Decoupled analysis and rendering
-
-: The analysis and rendering of the documentation are decoupled, and not dependent on Sphinx.
-: This means that you can use `sphinx-autodoc-fern` to generate documentation outside of Sphinx (see the `autodoc2` command line tool).
-
-## 🚀 Quick Start with Fern
+## Installation
 
 ```bash
-pip install sphinx-autodoc-fern
+pip install sphinx-autodoc2-fern
 ```
 
-To use the Fern renderer:
+## Usage
 
-```python
-from autodoc2.render.fern_ import FernRenderer
-
-renderer = FernRenderer()
-# Generate Fern-compatible documentation
-```
-
-Or use with the CLI:
+Generate Fern-compatible markdown documentation:
 
 ```bash
-autodoc2 --renderer fern your_package/
+autodoc2 --renderer fern /path/to/your/package
 ```
+
+This creates:
+- Markdown files with Fern-compatible frontmatter and slugs
+- `navigation.yml` for Fern docs structure
+- Tables with proper linking and descriptions
 
 ## Acknowledgments
 
