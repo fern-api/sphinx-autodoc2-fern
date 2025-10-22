@@ -31,6 +31,8 @@ class FernRenderer(RendererBase):
         if type_ in ("package", "module"):
             yield "---"
             yield "layout: overview"
+            slug = self._generate_slug(full_name)
+            yield f"slug: {slug}"
             yield "---"
             yield ""
         
@@ -137,12 +139,12 @@ class FernRenderer(RendererBase):
             yield ""
             for child in children_by_type["package"]:
                 name = child["full_name"].split(".")[-1]
-                # Create simple relative link using just the child name
-                link_path = name
+                # Create slug-based link using full dotted name
+                slug = self._generate_slug(child["full_name"])
                 doc_summary = child.get('doc', '').split('\n')[0][:80] if child.get('doc') else ""
                 if len(child.get('doc', '')) > 80:
                     doc_summary += "..."
-                yield f"- **[`{name}`]({link_path})** - {doc_summary}" if doc_summary else f"- **[`{name}`]({link_path})**"
+                yield f"- **[`{name}`]({slug})** - {doc_summary}" if doc_summary else f"- **[`{name}`]({slug})**"
             yield ""
             
         if has_submodules:
@@ -150,22 +152,12 @@ class FernRenderer(RendererBase):
             yield ""
             for child in children_by_type["module"]:
                 name = child["full_name"].split(".")[-1]
-                # Replace underscores with dashes in display text for better readability
-                display_name = name.replace('_', '-')
-                
-                # Create contextual link based on current page
-                current_parts = item["full_name"].split(".")
-                if len(current_parts) == 1:
-                    # On root page - use simple name
-                    link_path = display_name
-                else:
-                    # On subpackage page - use full filename (convert dots and underscores to dashes)
-                    link_path = child["full_name"].replace('.', '-').replace('_', '-')
-                    
+                # Create slug-based link using full dotted name
+                slug = self._generate_slug(child["full_name"])
                 doc_summary = child.get('doc', '').split('\n')[0][:80] if child.get('doc') else ""
                 if len(child.get('doc', '')) > 80:
                     doc_summary += "..."
-                yield f"- **[`{display_name}`]({link_path})** - {doc_summary}" if doc_summary else f"- **[`{display_name}`]({link_path})**"
+                yield f"- **[`{name}`]({slug})** - {doc_summary}" if doc_summary else f"- **[`{name}`]({slug})**"
             yield ""
         
         # Show Module Contents summary if we have actual content (not just submodules)
@@ -530,10 +522,11 @@ class FernRenderer(RendererBase):
         
         # Parameters section
         if sections["parameters"]:
-            yield "**Parameters:**"
-            yield ""
             # If we have function item data, use ParamField components
             if item and item.get("args"):
+                yield "**Parameters:**"
+                yield ""
+                
                 # Build parameter info map from function signature
                 param_info = {}
                 for prefix, name, annotation, default in item["args"]:
@@ -712,3 +705,81 @@ class FernRenderer(RendererBase):
             escaped_content = escaped_content.replace(placeholder, f'`{escaped_tag}`')
         
         return escaped_content
+
+    def _generate_slug(self, full_name: str) -> str:
+        """Generate slug from full dotted name: nemo_curator.utils.grouping → nemo-curator-utils-grouping"""
+        return full_name.replace('.', '-').replace('_', '-')
+
+    def generate_navigation_yaml(self) -> str:
+        """Generate navigation YAML for Fern docs.yml following sphinx autodoc2 toctree logic."""
+        import yaml
+        
+        # Find root packages (no dots in name)
+        root_packages = []
+        for item in self._db.get_by_type("package"):
+            full_name = item["full_name"]
+            if "." not in full_name:  # Root packages only
+                root_packages.append(item)
+        
+        if not root_packages:
+            return ""
+        
+        # Build navigation structure recursively
+        nav_contents = []
+        for root_pkg in sorted(root_packages, key=lambda x: x["full_name"]):
+            nav_item = self._build_nav_item_recursive(root_pkg)
+            if nav_item:
+                nav_contents.append(nav_item)
+        
+        # Create the final navigation structure
+        navigation = {
+            "navigation": [
+                {
+                    "section": "API Reference",
+                    "skip-slug": True,
+                    "contents": nav_contents
+                }
+            ]
+        }
+        
+        return yaml.dump(navigation, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+    def _build_nav_item_recursive(self, item: ItemData) -> dict[str, t.Any] | None:
+        """Build navigation item recursively following sphinx autodoc2 toctree logic."""
+        full_name = item["full_name"]
+        slug = self._generate_slug(full_name)
+        
+        # Get children (same logic as sphinx toctrees)
+        subpackages = list(self.get_children(item, {"package"}))
+        submodules = list(self.get_children(item, {"module"}))
+        
+        if subpackages or submodules:
+            # This has children - make it a section with skip-slug
+            section_item = {
+                "section": full_name.split(".")[-1],  # Use short name for section
+                "skip-slug": True,
+                "path": f"{slug}.md",
+                "contents": []
+            }
+            
+            # Add subpackages recursively (maxdepth: 3 like sphinx)
+            for child in sorted(subpackages, key=lambda x: x["full_name"]):
+                child_nav = self._build_nav_item_recursive(child)
+                if child_nav:
+                    section_item["contents"].append(child_nav)
+            
+            # Add submodules as pages (maxdepth: 1 like sphinx)
+            for child in sorted(submodules, key=lambda x: x["full_name"]):
+                child_slug = self._generate_slug(child["full_name"])
+                section_item["contents"].append({
+                    "page": child["full_name"].split(".")[-1],  # Use short name
+                    "path": f"{child_slug}.md"
+                })
+            
+            return section_item
+        else:
+            # Leaf item - just a page
+            return {
+                "page": full_name.split(".")[-1],  # Use short name
+                "path": f"{slug}.md"
+            }

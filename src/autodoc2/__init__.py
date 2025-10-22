@@ -3,7 +3,7 @@
 This is a fork of sphinx-autodoc2 with added support for Fern documentation format.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 
 def setup(app):  # type: ignore
