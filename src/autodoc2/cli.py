@@ -44,7 +44,7 @@ def main_app(
         help="Show the application version and exit.",
     ),
 ) -> None:
-    """[underline]CLI for sphinx-autodoc2[/underline]"""
+    """[underline]CLI for py2fern[/underline]"""
 
 
 @app_main.command("list")
@@ -198,9 +198,8 @@ def write(
     # TODO read from config file, to populate config object
     output: Path = typer.Option("_autodoc", help="Folder to write to"),
     clean: bool = typer.Option(False, "-c", "--clean", help="Remove old files"),
-    renderer: str = typer.Option("fern", "-r", "--renderer", help="Renderer to use: fern, rst, myst"),
 ) -> None:
-    """Create sphinx files for a python module or package."""
+    """Create Fern markdown files for a python module or package."""
     # gather the module
     modules: t.Iterable[t.Tuple[Path, str]]
     if path.is_dir():
@@ -257,19 +256,9 @@ def write(
 
         config = Config()
         
-        # Set renderer based on CLI option
-        if renderer == "rst":
-            from autodoc2.render.rst_ import RstRenderer
-            render_class = RstRenderer
-        elif renderer == "myst":
-            from autodoc2.render.myst_ import MystRenderer
-            render_class = MystRenderer
-        elif renderer == "fern":
-            from autodoc2.render.fern_ import FernRenderer
-            render_class = FernRenderer
-        else:
-            console.print(f"[red]Error[/red] Unknown renderer: {renderer}")
-            raise typer.Exit(1)
+        # Always use FernRenderer
+        from autodoc2.render.fern_ import FernRenderer
+        render_class = FernRenderer
         
         for mod_name in to_write:
             progress.update(task, advance=1, description=mod_name)
@@ -277,18 +266,22 @@ def write(
                 render_class(db, config, warn=_warn).render_item(mod_name)
             )
             
-            # Use hyphens in filenames for Fern renderer to match slugs
-            if renderer == "fern":
-                filename = mod_name.replace('.', '-').replace('_', '-')
-                out_path = output / (filename + render_class.EXTENSION)
-            else:
-                out_path = output / (mod_name + render_class.EXTENSION)
+            # Use hyphens in filenames to match Fern slugs
+            filename = mod_name.replace('.', '-').replace('_', '-')
+            out_path = output / (filename + render_class.EXTENSION)
             paths.append(out_path)
             if out_path.exists() and out_path.read_text("utf8") == content:
-                # Don't write the file if it hasn't changed
-                # this means that sphinx doesn't mark it for rebuild (mtime based)
+                # Don't write the file if it hasn't changed (optimization)
                 continue
             out_path.write_text(content, "utf8")
+
+    # Generate navigation.yml
+    console.print("[bold]Generating navigation.yml...[/bold]")
+    renderer_instance = render_class(db, config, warn=_warn)
+    nav_content = renderer_instance.generate_navigation_yaml()
+    nav_path = output / "navigation.yml"
+    nav_path.write_text(nav_content, "utf8")
+    console.print(f"Navigation written to: {nav_path}")
 
     # remove any files that are no longer needed
     if clean:

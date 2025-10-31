@@ -183,14 +183,10 @@ def _load_renderer(name: str, item: t.Any) -> type[RendererBase]:
         raise ValidationError(
             f"{name!r} must be a string or subclass of {RendererBase.__qualname__}"
         )
-    if item in ("rst", "restructuredtext"):
-        from autodoc2.render.rst_ import RstRenderer
+    if item in ("fern", "markdown", "md"):
+        from autodoc2.render.fern_ import FernRenderer
 
-        return RstRenderer
-    if item in ("markdown", "md", "myst"):
-        from autodoc2.render.myst_ import MystRenderer
-
-        return MystRenderer
+        return FernRenderer
     try:
         module_path, klass_name = item.rsplit(".", 1)
         mod = import_module(module_path)
@@ -262,17 +258,16 @@ class Config:
     )
 
     render_plugin: type[RendererBase] = dc.field(
-        default_factory=(lambda: _load_renderer("render_plugin", "rst")),
+        default_factory=(lambda: _load_renderer("render_plugin", "fern")),
         metadata={
             "help": (
-                "The renderer to use for the documentation. "
-                "This can be one of `rst` or `md`/`myst`, "
-                "to use the built-in renderers, "
+                "The renderer to use for Fern documentation generation. "
+                "This can be `fern` for the built-in Fern renderer, "
                 "or a string pointing to a class that inherits from `RendererBase`, "
                 "such as `mypackage.mymodule.MyRenderer`."
             ),
             "sphinx_type": str,
-            "sphinx_default": "rst",
+            "sphinx_default": "fern",
             "sphinx_validate": _load_renderer,
             "doc_type": "str",
             "category": "render",

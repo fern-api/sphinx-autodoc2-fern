@@ -1,0 +1,596 @@
+navigation:
+- section: API Reference
+  skip-slug: true
+  contents:
+  - section: nemo_curator
+    skip-slug: true
+    path: nemo-curator.md
+    contents:
+    - section: backends
+      skip-slug: true
+      path: nemo-curator-backends.md
+      contents:
+      - section: experimental
+        skip-slug: true
+        path: nemo-curator-backends-experimental.md
+        contents:
+        - section: ray_actor_pool
+          skip-slug: true
+          path: nemo-curator-backends-experimental-ray-actor-pool.md
+          contents:
+          - page: adapter
+            path: nemo-curator-backends-experimental-ray-actor-pool-adapter.md
+          - page: executor
+            path: nemo-curator-backends-experimental-ray-actor-pool-executor.md
+          - page: raft_adapter
+            path: nemo-curator-backends-experimental-ray-actor-pool-raft-adapter.md
+          - page: shuffle_adapter
+            path: nemo-curator-backends-experimental-ray-actor-pool-shuffle-adapter.md
+          - page: utils
+            path: nemo-curator-backends-experimental-ray-actor-pool-utils.md
+        - section: ray_data
+          skip-slug: true
+          path: nemo-curator-backends-experimental-ray-data.md
+          contents:
+          - page: adapter
+            path: nemo-curator-backends-experimental-ray-data-adapter.md
+          - page: executor
+            path: nemo-curator-backends-experimental-ray-data-executor.md
+          - page: utils
+            path: nemo-curator-backends-experimental-ray-data-utils.md
+        - page: utils
+          path: nemo-curator-backends-experimental-utils.md
+      - section: internal
+        skip-slug: true
+        path: nemo-curator-backends-internal.md
+        contents:
+        - section: raft
+          skip-slug: true
+          path: nemo-curator-backends-internal-raft.md
+          contents:
+          - page: ray_comms
+            path: nemo-curator-backends-internal-raft-ray-comms.md
+      - section: xenna
+        skip-slug: true
+        path: nemo-curator-backends-xenna.md
+        contents:
+        - page: adapter
+          path: nemo-curator-backends-xenna-adapter.md
+        - page: executor
+          path: nemo-curator-backends-xenna-executor.md
+      - page: base
+        path: nemo-curator-backends-base.md
+      - page: utils
+        path: nemo-curator-backends-utils.md
+    - section: core
+      skip-slug: true
+      path: nemo-curator-core.md
+      contents:
+      - page: client
+        path: nemo-curator-core-client.md
+      - page: constants
+        path: nemo-curator-core-constants.md
+      - page: utils
+        path: nemo-curator-core-utils.md
+    - section: metrics
+      skip-slug: true
+      path: nemo-curator-metrics.md
+      contents:
+      - page: constants
+        path: nemo-curator-metrics-constants.md
+      - page: start_prometheus_grafana
+        path: nemo-curator-metrics-start-prometheus-grafana.md
+      - page: utils
+        path: nemo-curator-metrics-utils.md
+    - section: models
+      skip-slug: true
+      path: nemo-curator-models.md
+      contents:
+      - page: aesthetics
+        path: nemo-curator-models-aesthetics.md
+      - page: base
+        path: nemo-curator-models-base.md
+      - page: clip
+        path: nemo-curator-models-clip.md
+      - page: cosmos_embed1
+        path: nemo-curator-models-cosmos-embed1.md
+      - page: internvideo2_mm
+        path: nemo-curator-models-internvideo2-mm.md
+      - page: nsfw
+        path: nemo-curator-models-nsfw.md
+      - page: prompt_formatter
+        path: nemo-curator-models-prompt-formatter.md
+      - page: qwen_lm
+        path: nemo-curator-models-qwen-lm.md
+      - page: qwen_vl
+        path: nemo-curator-models-qwen-vl.md
+      - page: transnetv2
+        path: nemo-curator-models-transnetv2.md
+    - section: pipeline
+      skip-slug: true
+      path: nemo-curator-pipeline.md
+      contents:
+      - page: pipeline
+        path: nemo-curator-pipeline-pipeline.md
+    - section: stages
+      skip-slug: true
+      path: nemo-curator-stages.md
+      contents:
+      - section: audio
+        skip-slug: true
+        path: nemo-curator-stages-audio.md
+        contents:
+        - section: datasets
+          skip-slug: true
+          path: nemo-curator-stages-audio-datasets.md
+          contents:
+          - section: fleurs
+            skip-slug: true
+            path: nemo-curator-stages-audio-datasets-fleurs.md
+            contents:
+            - page: create_initial_manifest
+              path: nemo-curator-stages-audio-datasets-fleurs-create-initial-manifest.md
+          - page: file_utils
+            path: nemo-curator-stages-audio-datasets-file-utils.md
+        - section: inference
+          skip-slug: true
+          path: nemo-curator-stages-audio-inference.md
+          contents:
+          - page: asr_nemo
+            path: nemo-curator-stages-audio-inference-asr-nemo.md
+        - section: io
+          skip-slug: true
+          path: nemo-curator-stages-audio-io.md
+          contents:
+          - page: convert
+            path: nemo-curator-stages-audio-io-convert.md
+        - section: metrics
+          skip-slug: true
+          path: nemo-curator-stages-audio-metrics.md
+          contents:
+          - page: get_wer
+            path: nemo-curator-stages-audio-metrics-get-wer.md
+        - page: common
+          path: nemo-curator-stages-audio-common.md
+      - section: deduplication
+        skip-slug: true
+        path: nemo-curator-stages-deduplication.md
+        contents:
+        - section: exact
+          skip-slug: true
+          path: nemo-curator-stages-deduplication-exact.md
+          contents:
+          - page: identification
+            path: nemo-curator-stages-deduplication-exact-identification.md
+          - page: workflow
+            path: nemo-curator-stages-deduplication-exact-workflow.md
+        - section: fuzzy
+          skip-slug: true
+          path: nemo-curator-stages-deduplication-fuzzy.md
+          contents:
+          - section: lsh
+            skip-slug: true
+            path: nemo-curator-stages-deduplication-fuzzy-lsh.md
+            contents:
+            - page: lsh
+              path: nemo-curator-stages-deduplication-fuzzy-lsh-lsh.md
+            - page: stage
+              path: nemo-curator-stages-deduplication-fuzzy-lsh-stage.md
+          - page: buckets_to_edges
+            path: nemo-curator-stages-deduplication-fuzzy-buckets-to-edges.md
+          - page: connected_components
+            path: nemo-curator-stages-deduplication-fuzzy-connected-components.md
+          - page: identify_duplicates
+            path: nemo-curator-stages-deduplication-fuzzy-identify-duplicates.md
+          - page: minhash
+            path: nemo-curator-stages-deduplication-fuzzy-minhash.md
+          - page: utils
+            path: nemo-curator-stages-deduplication-fuzzy-utils.md
+          - page: workflow
+            path: nemo-curator-stages-deduplication-fuzzy-workflow.md
+        - section: semantic
+          skip-slug: true
+          path: nemo-curator-stages-deduplication-semantic.md
+          contents:
+          - page: identify_duplicates
+            path: nemo-curator-stages-deduplication-semantic-identify-duplicates.md
+          - page: kmeans
+            path: nemo-curator-stages-deduplication-semantic-kmeans.md
+          - page: pairwise
+            path: nemo-curator-stages-deduplication-semantic-pairwise.md
+          - page: pairwise_io
+            path: nemo-curator-stages-deduplication-semantic-pairwise-io.md
+          - page: ranking
+            path: nemo-curator-stages-deduplication-semantic-ranking.md
+          - page: utils
+            path: nemo-curator-stages-deduplication-semantic-utils.md
+          - page: workflow
+            path: nemo-curator-stages-deduplication-semantic-workflow.md
+        - section: shuffle_utils
+          skip-slug: true
+          path: nemo-curator-stages-deduplication-shuffle-utils.md
+          contents:
+          - page: rapidsmpf_shuffler
+            path: nemo-curator-stages-deduplication-shuffle-utils-rapidsmpf-shuffler.md
+          - page: stage
+            path: nemo-curator-stages-deduplication-shuffle-utils-stage.md
+        - page: gpu_utils
+          path: nemo-curator-stages-deduplication-gpu-utils.md
+        - page: id_generator
+          path: nemo-curator-stages-deduplication-id-generator.md
+        - page: io_utils
+          path: nemo-curator-stages-deduplication-io-utils.md
+      - section: image
+        skip-slug: true
+        path: nemo-curator-stages-image.md
+        contents:
+        - section: deduplication
+          skip-slug: true
+          path: nemo-curator-stages-image-deduplication.md
+          contents:
+          - page: removal
+            path: nemo-curator-stages-image-deduplication-removal.md
+        - section: embedders
+          skip-slug: true
+          path: nemo-curator-stages-image-embedders.md
+          contents:
+          - page: clip_embedder
+            path: nemo-curator-stages-image-embedders-clip-embedder.md
+        - section: filters
+          skip-slug: true
+          path: nemo-curator-stages-image-filters.md
+          contents:
+          - page: aesthetic_filter
+            path: nemo-curator-stages-image-filters-aesthetic-filter.md
+          - page: base
+            path: nemo-curator-stages-image-filters-base.md
+          - page: nsfw_filter
+            path: nemo-curator-stages-image-filters-nsfw-filter.md
+        - section: io
+          skip-slug: true
+          path: nemo-curator-stages-image-io.md
+          contents:
+          - page: convert
+            path: nemo-curator-stages-image-io-convert.md
+          - page: image_reader
+            path: nemo-curator-stages-image-io-image-reader.md
+          - page: image_writer
+            path: nemo-curator-stages-image-io-image-writer.md
+      - section: text
+        skip-slug: true
+        path: nemo-curator-stages-text.md
+        contents:
+        - section: classifiers
+          skip-slug: true
+          path: nemo-curator-stages-text-classifiers.md
+          contents:
+          - page: aegis
+            path: nemo-curator-stages-text-classifiers-aegis.md
+          - page: aegis_utils
+            path: nemo-curator-stages-text-classifiers-aegis-utils.md
+          - page: base
+            path: nemo-curator-stages-text-classifiers-base.md
+          - page: constants
+            path: nemo-curator-stages-text-classifiers-constants.md
+          - page: content_type
+            path: nemo-curator-stages-text-classifiers-content-type.md
+          - page: domain
+            path: nemo-curator-stages-text-classifiers-domain.md
+          - page: fineweb_edu
+            path: nemo-curator-stages-text-classifiers-fineweb-edu.md
+          - page: prompt_task_complexity
+            path: nemo-curator-stages-text-classifiers-prompt-task-complexity.md
+          - page: quality
+            path: nemo-curator-stages-text-classifiers-quality.md
+        - section: deduplication
+          skip-slug: true
+          path: nemo-curator-stages-text-deduplication.md
+          contents:
+          - page: removal
+            path: nemo-curator-stages-text-deduplication-removal.md
+          - page: removal_workflow
+            path: nemo-curator-stages-text-deduplication-removal-workflow.md
+          - page: semantic
+            path: nemo-curator-stages-text-deduplication-semantic.md
+        - section: download
+          skip-slug: true
+          path: nemo-curator-stages-text-download.md
+          contents:
+          - section: arxiv
+            skip-slug: true
+            path: nemo-curator-stages-text-download-arxiv.md
+            contents:
+            - page: download
+              path: nemo-curator-stages-text-download-arxiv-download.md
+            - page: extract
+              path: nemo-curator-stages-text-download-arxiv-extract.md
+            - page: iterator
+              path: nemo-curator-stages-text-download-arxiv-iterator.md
+            - page: stage
+              path: nemo-curator-stages-text-download-arxiv-stage.md
+            - page: url_generation
+              path: nemo-curator-stages-text-download-arxiv-url-generation.md
+          - section: base
+            skip-slug: true
+            path: nemo-curator-stages-text-download-base.md
+            contents:
+            - page: download
+              path: nemo-curator-stages-text-download-base-download.md
+            - page: extract
+              path: nemo-curator-stages-text-download-base-extract.md
+            - page: iterator
+              path: nemo-curator-stages-text-download-base-iterator.md
+            - page: stage
+              path: nemo-curator-stages-text-download-base-stage.md
+            - page: url_generation
+              path: nemo-curator-stages-text-download-base-url-generation.md
+          - section: common_crawl
+            skip-slug: true
+            path: nemo-curator-stages-text-download-common-crawl.md
+            contents:
+            - page: download
+              path: nemo-curator-stages-text-download-common-crawl-download.md
+            - page: extract
+              path: nemo-curator-stages-text-download-common-crawl-extract.md
+            - page: stage
+              path: nemo-curator-stages-text-download-common-crawl-stage.md
+            - page: url_generation
+              path: nemo-curator-stages-text-download-common-crawl-url-generation.md
+            - page: warc_iterator
+              path: nemo-curator-stages-text-download-common-crawl-warc-iterator.md
+          - section: html_extractors
+            skip-slug: true
+            path: nemo-curator-stages-text-download-html-extractors.md
+            contents:
+            - section: utils
+              skip-slug: true
+              path: nemo-curator-stages-text-download-html-extractors-utils.md
+              contents:
+              - page: ja_stopwords
+                path: nemo-curator-stages-text-download-html-extractors-utils-ja-stopwords.md
+              - page: th_stopwords
+                path: nemo-curator-stages-text-download-html-extractors-utils-th-stopwords.md
+              - page: zh_stopwords
+                path: nemo-curator-stages-text-download-html-extractors-utils-zh-stopwords.md
+            - page: base
+              path: nemo-curator-stages-text-download-html-extractors-base.md
+            - page: justext
+              path: nemo-curator-stages-text-download-html-extractors-justext.md
+            - page: resiliparse
+              path: nemo-curator-stages-text-download-html-extractors-resiliparse.md
+            - page: trafilatura
+              path: nemo-curator-stages-text-download-html-extractors-trafilatura.md
+          - section: wikipedia
+            skip-slug: true
+            path: nemo-curator-stages-text-download-wikipedia.md
+            contents:
+            - page: download
+              path: nemo-curator-stages-text-download-wikipedia-download.md
+            - page: extract
+              path: nemo-curator-stages-text-download-wikipedia-extract.md
+            - page: iterator
+              path: nemo-curator-stages-text-download-wikipedia-iterator.md
+            - page: stage
+              path: nemo-curator-stages-text-download-wikipedia-stage.md
+            - page: url_generation
+              path: nemo-curator-stages-text-download-wikipedia-url-generation.md
+          - page: utils
+            path: nemo-curator-stages-text-download-utils.md
+        - section: embedders
+          skip-slug: true
+          path: nemo-curator-stages-text-embedders.md
+          contents:
+          - page: base
+            path: nemo-curator-stages-text-embedders-base.md
+          - page: utils
+            path: nemo-curator-stages-text-embedders-utils.md
+        - section: filters
+          skip-slug: true
+          path: nemo-curator-stages-text-filters.md
+          contents:
+          - page: code
+            path: nemo-curator-stages-text-filters-code.md
+          - page: doc_filter
+            path: nemo-curator-stages-text-filters-doc-filter.md
+          - page: fasttext_filter
+            path: nemo-curator-stages-text-filters-fasttext-filter.md
+          - page: heuristic_filter
+            path: nemo-curator-stages-text-filters-heuristic-filter.md
+        - section: io
+          skip-slug: true
+          path: nemo-curator-stages-text-io.md
+          contents:
+          - section: reader
+            skip-slug: true
+            path: nemo-curator-stages-text-io-reader.md
+            contents:
+            - page: base
+              path: nemo-curator-stages-text-io-reader-base.md
+            - page: jsonl
+              path: nemo-curator-stages-text-io-reader-jsonl.md
+            - page: parquet
+              path: nemo-curator-stages-text-io-reader-parquet.md
+          - section: writer
+            skip-slug: true
+            path: nemo-curator-stages-text-io-writer.md
+            contents:
+            - page: base
+              path: nemo-curator-stages-text-io-writer-base.md
+            - page: jsonl
+              path: nemo-curator-stages-text-io-writer-jsonl.md
+            - page: parquet
+              path: nemo-curator-stages-text-io-writer-parquet.md
+            - page: utils
+              path: nemo-curator-stages-text-io-writer-utils.md
+        - section: models
+          skip-slug: true
+          path: nemo-curator-stages-text-models.md
+          contents:
+          - page: model
+            path: nemo-curator-stages-text-models-model.md
+          - page: tokenizer
+            path: nemo-curator-stages-text-models-tokenizer.md
+          - page: utils
+            path: nemo-curator-stages-text-models-utils.md
+        - section: modifiers
+          skip-slug: true
+          path: nemo-curator-stages-text-modifiers.md
+          contents:
+          - page: c4
+            path: nemo-curator-stages-text-modifiers-c4.md
+          - page: doc_modifier
+            path: nemo-curator-stages-text-modifiers-doc-modifier.md
+          - page: fasttext
+            path: nemo-curator-stages-text-modifiers-fasttext.md
+          - page: line_remover
+            path: nemo-curator-stages-text-modifiers-line-remover.md
+          - page: markdown_remover
+            path: nemo-curator-stages-text-modifiers-markdown-remover.md
+          - page: newline_normalizer
+            path: nemo-curator-stages-text-modifiers-newline-normalizer.md
+          - page: quotation_remover
+            path: nemo-curator-stages-text-modifiers-quotation-remover.md
+          - page: slicer
+            path: nemo-curator-stages-text-modifiers-slicer.md
+          - page: unicode_reformatter
+            path: nemo-curator-stages-text-modifiers-unicode-reformatter.md
+          - page: url_remover
+            path: nemo-curator-stages-text-modifiers-url-remover.md
+        - section: modules
+          skip-slug: true
+          path: nemo-curator-stages-text-modules.md
+          contents:
+          - page: add_id
+            path: nemo-curator-stages-text-modules-add-id.md
+          - page: modifier
+            path: nemo-curator-stages-text-modules-modifier.md
+          - page: score_filter
+            path: nemo-curator-stages-text-modules-score-filter.md
+        - section: utils
+          skip-slug: true
+          path: nemo-curator-stages-text-utils.md
+          contents:
+          - page: constants
+            path: nemo-curator-stages-text-utils-constants.md
+          - page: text_utils
+            path: nemo-curator-stages-text-utils-text-utils.md
+      - section: video
+        skip-slug: true
+        path: nemo-curator-stages-video.md
+        contents:
+        - section: caption
+          skip-slug: true
+          path: nemo-curator-stages-video-caption.md
+          contents:
+          - page: caption_enhancement
+            path: nemo-curator-stages-video-caption-caption-enhancement.md
+          - page: caption_generation
+            path: nemo-curator-stages-video-caption-caption-generation.md
+          - page: caption_preparation
+            path: nemo-curator-stages-video-caption-caption-preparation.md
+        - section: clipping
+          skip-slug: true
+          path: nemo-curator-stages-video-clipping.md
+          contents:
+          - page: clip_extraction_stages
+            path: nemo-curator-stages-video-clipping-clip-extraction-stages.md
+          - page: clip_frame_extraction
+            path: nemo-curator-stages-video-clipping-clip-frame-extraction.md
+          - page: transnetv2_extraction
+            path: nemo-curator-stages-video-clipping-transnetv2-extraction.md
+          - page: video_frame_extraction
+            path: nemo-curator-stages-video-clipping-video-frame-extraction.md
+        - section: embedding
+          skip-slug: true
+          path: nemo-curator-stages-video-embedding.md
+          contents:
+          - page: cosmos_embed1
+            path: nemo-curator-stages-video-embedding-cosmos-embed1.md
+          - page: internvideo2
+            path: nemo-curator-stages-video-embedding-internvideo2.md
+        - section: filtering
+          skip-slug: true
+          path: nemo-curator-stages-video-filtering.md
+          contents:
+          - page: clip_aesthetic_filter
+            path: nemo-curator-stages-video-filtering-clip-aesthetic-filter.md
+          - page: motion_filter
+            path: nemo-curator-stages-video-filtering-motion-filter.md
+          - page: motion_vector_backend
+            path: nemo-curator-stages-video-filtering-motion-vector-backend.md
+        - section: io
+          skip-slug: true
+          path: nemo-curator-stages-video-io.md
+          contents:
+          - page: clip_writer
+            path: nemo-curator-stages-video-io-clip-writer.md
+          - page: video_reader
+            path: nemo-curator-stages-video-io-video-reader.md
+        - section: preview
+          skip-slug: true
+          path: nemo-curator-stages-video-preview.md
+          contents:
+          - page: preview
+            path: nemo-curator-stages-video-preview-preview.md
+      - page: base
+        path: nemo-curator-stages-base.md
+      - page: client_partitioning
+        path: nemo-curator-stages-client-partitioning.md
+      - page: file_partitioning
+        path: nemo-curator-stages-file-partitioning.md
+      - page: function_decorators
+        path: nemo-curator-stages-function-decorators.md
+      - page: resources
+        path: nemo-curator-stages-resources.md
+    - section: tasks
+      skip-slug: true
+      path: nemo-curator-tasks.md
+      contents:
+      - page: audio_batch
+        path: nemo-curator-tasks-audio-batch.md
+      - page: document
+        path: nemo-curator-tasks-document.md
+      - page: file_group
+        path: nemo-curator-tasks-file-group.md
+      - page: image
+        path: nemo-curator-tasks-image.md
+      - page: tasks
+        path: nemo-curator-tasks-tasks.md
+      - page: utils
+        path: nemo-curator-tasks-utils.md
+      - page: video
+        path: nemo-curator-tasks-video.md
+    - section: utils
+      skip-slug: true
+      path: nemo-curator-utils.md
+      contents:
+      - page: client_utils
+        path: nemo-curator-utils-client-utils.md
+      - page: column_utils
+        path: nemo-curator-utils-column-utils.md
+      - page: decoder_utils
+        path: nemo-curator-utils-decoder-utils.md
+      - page: file_utils
+        path: nemo-curator-utils-file-utils.md
+      - page: grouping
+        path: nemo-curator-utils-grouping.md
+      - page: hf_download_utils
+        path: nemo-curator-utils-hf-download-utils.md
+      - page: nvcodec_utils
+        path: nemo-curator-utils-nvcodec-utils.md
+      - page: operation_utils
+        path: nemo-curator-utils-operation-utils.md
+      - page: performance_utils
+        path: nemo-curator-utils-performance-utils.md
+      - page: split_large_files
+        path: nemo-curator-utils-split-large-files.md
+      - page: storage_utils
+        path: nemo-curator-utils-storage-utils.md
+      - page: windowing_utils
+        path: nemo-curator-utils-windowing-utils.md
+      - page: writer_utils
+        path: nemo-curator-utils-writer-utils.md
+    - page: config
+      path: nemo-curator-config.md
+    - page: package_info
+      path: nemo-curator-package-info.md

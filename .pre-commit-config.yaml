@@ -1,7 +1,7 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 
-exclude: ^tests/.*\.md|tests/.*\.rst|tests/.*\.xml|docs/apidocs/.*
+exclude: ^tests/.*\.md
 
 repos:
     - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -23,5 +23,5 @@ repos:
       hooks:
       - id: mypy
         args: [--config-file=pyproject.toml]
-        additional_dependencies: ["sphinx~=7.3", "typer[all]"]
+        additional_dependencies: ["typer[all]"]
         exclude: ^tests/.*\.py$
