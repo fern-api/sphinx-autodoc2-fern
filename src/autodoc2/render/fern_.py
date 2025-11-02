@@ -179,9 +179,8 @@ class FernRenderer(RendererBase):
                 for child in children_by_type["class"]:
                     full_name = child["full_name"]
                     short_name = full_name.split('.')[-1]
-                    # Create anchor that matches auto-generated markdown anchors from headers
-                    anchor = self._create_anchor(full_name)
-                    name_link = f"[`{short_name}`](#{anchor})"
+                    # Use context-aware linking (same-page anchor vs cross-page)
+                    name_link = self._get_cross_reference_link(full_name, short_name, item["full_name"])
                     # Get full description (first paragraph, not truncated)
                     doc_lines = child.get('doc', '').strip().split('\n')
                     if doc_lines and doc_lines[0]:
@@ -208,9 +207,8 @@ class FernRenderer(RendererBase):
                 for child in children_by_type["function"]:
                     full_name = child["full_name"]
                     short_name = full_name.split('.')[-1]
-                    # Create proper anchor that matches the header (use full name for anchor)
-                    anchor = self._create_anchor(full_name)
-                    name_link = f"[`{short_name}`](#{anchor})"
+                    # Use context-aware linking (same-page anchor vs cross-page)
+                    name_link = self._get_cross_reference_link(full_name, short_name, item["full_name"])
                     # Get full description (first paragraph, not truncated)
                     doc_lines = child.get('doc', '').strip().split('\n')
                     if doc_lines and doc_lines[0]:
@@ -627,8 +625,51 @@ class FernRenderer(RendererBase):
     def _generate_anchor_id(self, full_name: str) -> str:
         """Generate anchor ID from full_name for use in <Anchor> components."""
         return full_name.replace('.', '').replace('_', '').lower()
+    
+    def _are_on_same_page(self, item1_name: str, item2_name: str) -> bool:
+        """Determine if two items are rendered on the same page."""
+        item1 = self.get_item(item1_name)
+        item2 = self.get_item(item2_name)
+        
+        if not item1 or not item2:
+            return False
+        
+        # Each item type gets its own page, except for direct children
+        item1_page = self._get_page_for_item(item1_name)
+        item2_page = self._get_page_for_item(item2_name)
+        
+        return item1_page == item2_page
+    
+    def _get_page_for_item(self, full_name: str) -> str:
+        """Get the page where this item is rendered."""
+        item = self.get_item(full_name)
+        if not item:
+            return full_name
+        
+        item_type = item['type']
+        parts = full_name.split('.')
+        
+        # Only packages, modules, and classes get their own dedicated pages
+        if item_type in ('package', 'module', 'class'):
+            return full_name
+        
+        # Functions, methods, properties, attributes, data are rendered on their parent's page
+        elif item_type in ('function', 'method', 'property', 'attribute', 'data'):
+            # Find the parent (class, module, or package)
+            for i in range(len(parts) - 1, 0, -1):
+                parent_name = '.'.join(parts[:i])
+                parent_item = self.get_item(parent_name)
+                if parent_item and parent_item['type'] in ('package', 'module', 'class'):
+                    return parent_name
+            
+            # Fallback - shouldn't happen
+            return full_name
+        
+        else:
+            # Unknown type, assume it gets its own page
+            return full_name
 
-    def _get_cross_reference_link(self, target_name: str, display_name: str = None) -> str:
+    def _get_cross_reference_link(self, target_name: str, display_name: str = None, current_page: str = None) -> str:
         """Generate cross-reference link to another documented object."""
         # Check if target exists in our database
         target_item = self.get_item(target_name)
@@ -636,23 +677,18 @@ class FernRenderer(RendererBase):
             # Return plain text if target not found
             return f"`{display_name or target_name}`"
         
-        # Determine the correct page to link to
-        target_parts = target_name.split('.')
+        link_text = display_name or target_name.split('.')[-1]
+        anchor_id = self._generate_anchor_id(target_name)
         
-        # For items that get their own pages (packages, modules, classes, functions)
-        if target_item['type'] in ('package', 'module', 'class', 'function'):
-            # Link directly to their own page
-            page_slug = self._generate_slug(target_name)
-            anchor_id = self._generate_anchor_id(target_name)
-            link_text = display_name or target_parts[-1]
-            return f"[`{link_text}`]({page_slug}#{anchor_id})"
+        # Determine if target is on same page as current page
+        if current_page and self._are_on_same_page(target_name, current_page):
+            # Same page - use anchor link only
+            return f"[`{link_text}`](#{anchor_id})"
         else:
-            # For class members (methods, attributes), link to the class page
-            parent_name = '.'.join(target_parts[:-1])  # Remove method/attribute name
-            parent_slug = self._generate_slug(parent_name)
-            anchor_id = self._generate_anchor_id(target_name)
-            link_text = display_name or target_parts[-1]
-            return f"[`{link_text}`]({parent_slug}#{anchor_id})"
+            # Different page - use cross-page link  
+            target_page = self._get_page_for_item(target_name)
+            target_page_slug = self._generate_slug(target_page)
+            return f"[`{link_text}`]({target_page_slug}#{anchor_id})"
 
     def _format_code_block_with_links(self, code: str, language: str = "python") -> str:
         """Format code block with deep linking using CodeBlock component."""
