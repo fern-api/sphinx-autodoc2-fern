@@ -15,26 +15,22 @@ pipx install py2fern
 Generate Fern markdown documentation:
 
 ```bash
-py2fern /path/to/your/package
+py2fern write /path/to/your/package
+```
+
+Specify output directory:
+
+```bash
+py2fern write /path/to/your/package --output ./docs/api
 ```
 
 This creates:
-
-- Markdown files with Fern-compatible frontmatter and slugs
-- `navigation.yml` for Fern docs structure
-- Tables with proper linking and descriptions
+- **MDX files** with Fern-compatible frontmatter and slugs
+- **`navigation.yml`** for Fern docs structure 
 
 ## Acknowledgments
 
 This project is a fork of the excellent [`sphinx-autodoc2`](https://github.com/sphinx-extensions2/sphinx-autodoc2) by Chris Sewell. All credit for the core functionality goes to the original project.
-
-## Features
-
-- **Static analysis** - No need to install your package
-- **Handles `TYPE_CHECKING` blocks** - Documents typing-only imports  
-- **Follows `__all__`** - Only documents public API
-- **Fern-ready output** - Frontmatter, slugs, ParamField components
-- **Navigation generation** - Automatic `navigation.yml` for Fern docs
 
 ## Development
 
