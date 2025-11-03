@@ -1,7 +1,4 @@
 """Convert the database items into documentation."""
-
-# note, for the directives and options see:
-# https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html
 from __future__ import annotations
 
 import abc

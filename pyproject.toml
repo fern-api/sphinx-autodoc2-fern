@@ -6,44 +6,35 @@ build-backend = "flit_core.buildapi"
 name = "autodoc2"
 
 [project]
-name = "sphinx-autodoc2-fern"
+name = "py2fern"
 dynamic = ["version", "description"]
 authors = [{name = "Ryan Stephen", email = "ryanstep@buildwithfern.com"}]
 license = {file = "LICENSE"}
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Framework :: Sphinx :: Extension",
 ]
 readme = "README.md"
-keywords = ["sphinx", "autodoc", "extension", "documentation", "fern", "api"]
-urls = {Home = "https://github.com/fern-api/sphinx-autodoc2-fern"}
+keywords = ["python", "documentation", "fern", "api", "static-analysis"]
+urls = {Home = "https://github.com/fern-api/py2fern"}
 requires-python = ">=3.8"
 dependencies = [
     "astroid>=2.7,<4",
-    "tomli; python_version<'3.11'",
-    "typing-extensions"
+    "tomli; python_version<'3.11'", 
+    "typing-extensions",
+    "typer[all]",
+    "PyYAML"
 ]
 
 [project.optional-dependencies]
-cli = ["typer[all]"]
-# we don't put a hard dependency on sphinx,
-# because anyway the core can be run without it
-sphinx = ["sphinx>=4.0.0"]
 testing = [
     "pytest",
-    "pytest-regressions",
+    "pytest-regressions", 
     "pytest-cov",
-    "sphinx>=4.0.0,<7",
-]
-docs = [
-    "sphinx>=4.0.0",
-    "furo",
-    "myst-parser"
 ]
 
 [project.scripts]
-autodoc2 = "autodoc2.cli:app_main"
+py2fern = "autodoc2.cli:app_main"
 
 [tool.ruff.lint]
 extend-select = [
@@ -80,17 +71,11 @@ exclude = ['^tests/.*']
 [[tool.mypy.overrides]]
 module = [
     "astroid.*",  # https://github.com/PyCQA/astroid/issues/1287
-    "docutils.*",
     "tomllib.*",
     "tomli.*",
 ]
 ignore_missing_imports = true
 
-[[tool.mypy.overrides]]
-module = ["autodoc2.sphinx.autodoc"]
-# the try/except for tomllib/tomli causes different behaviour
-# on different python versions
-warn_unused_ignores = false
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -111,14 +96,5 @@ extras =
 commands = pytest {posargs}
 
 [testenv:cli-py{38,39,310,311}]
-extras = cli
-commands = autodoc2 {posargs}
-
-[testenv:docs]
-extras = docs
-passenv =
-    TERM
-allowlist_externals = echo
-commands = sphinx-build {posargs} -nW --keep-going -b html -d docs/_build/doctrees docs docs/_build/html
-commands_post = echo "Documentation available at: docs/_build/html/index.html"
+commands = py2fern {posargs}
 """

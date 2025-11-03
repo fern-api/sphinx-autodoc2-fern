@@ -15,9 +15,9 @@ _RE_DELIMS = re.compile(r"(\s*[\[\]\(\),]\s*)")
 
 
 class FernRenderer(RendererBase):
-    """Render the documentation as Fern-compatible Markdown."""
+    """Render the documentation as Fern-compatible MDX"""
 
-    EXTENSION = ".md"
+    EXTENSION = ".mdx"
 
     def render_item(self, full_name: str) -> t.Iterable[str]:
         """Render a single item by dispatching to the appropriate method."""
@@ -63,44 +63,49 @@ class FernRenderer(RendererBase):
         full_name = item["full_name"]
         show_annotations = self.show_annotations(item)
         
+        # Add anchor for linking
+        anchor_id = self._generate_anchor_id(full_name)
+        yield f'<Anchor id="{anchor_id}" />'
+        yield ""
+        
         # Function signature in code block (no header - code block IS the header)
-        yield "```python"
+        return_annotation = f" -> {self.format_annotation(item['return_annotation'])}" if show_annotations and item.get("return_annotation") else ""
         
         # Check if we should use inline or multiline formatting
         # Count non-self parameters
         non_self_args = [arg for arg in item.get('args', []) if arg[1] != 'self']
         use_inline = len(non_self_args) <= 1
         
-        return_annotation = f" -> {self.format_annotation(item['return_annotation'])}" if show_annotations and item.get("return_annotation") else ""
-        
         if use_inline:
             # Single parameter or no parameters - use inline format
             args_formatted = self.format_args(item['args'], show_annotations)
-            yield f"{full_name}({args_formatted}){return_annotation}"
+            code_content = f"{full_name}({args_formatted}){return_annotation}"
         else:
             # Multiple parameters - use multiline format
             args_formatted = self._format_args_multiline(item['args'], show_annotations)
-            yield f"{full_name}("
+            code_lines = [f"{full_name}("]
             if args_formatted.strip():
                 for line in args_formatted.split('\n'):
                     if line.strip():
-                        yield f"    {line.strip()}"
-            yield f"){return_annotation}"
+                        code_lines.append(f"    {line.strip()}")
+            code_lines.append(f"){return_annotation}")
+            code_content = '\n'.join(code_lines)
         
-        yield "```"
+        # Use enhanced code block formatting with potential links
+        formatted_code = self._format_code_block_with_links(code_content, "python")
+        for line in formatted_code.split('\n'):
+            yield line
         yield ""
         
-        # Function docstring
+        # Function docstring - use simple approach like MyST
         if self.show_docstring(item):
-            docstring_lines = list(self._format_docstring_sections(item['doc'], item))
-            if any(line.strip() for line in docstring_lines):
-                for line in docstring_lines:
-                    if line.strip():
-                        # Convert NOTE: and WARNING: to Fern components
-                        formatted_line = self._format_fern_callouts(line)
-                        yield formatted_line
-                    else:
-                        yield ""
+            # Just yield the raw docstring and let Fern handle it
+            raw_docstring = item.get('doc', '').strip()
+            if raw_docstring:
+                # Apply MyST directive conversions and escape for MDX
+                processed_docstring = self._convert_myst_directives(raw_docstring)
+                escaped_docstring = self._escape_fern_content(processed_docstring)
+                yield escaped_docstring
         yield ""
 
     def render_module(self, item: ItemData) -> t.Iterable[str]:
@@ -174,9 +179,8 @@ class FernRenderer(RendererBase):
                 for child in children_by_type["class"]:
                     full_name = child["full_name"]
                     short_name = full_name.split('.')[-1]
-                    # Create anchor that matches auto-generated markdown anchors from headers
-                    anchor = self._create_anchor(full_name)
-                    name_link = f"[`{short_name}`](#{anchor})"
+                    # Use context-aware linking (same-page anchor vs cross-page)
+                    name_link = self._get_cross_reference_link(full_name, short_name, item["full_name"])
                     # Get full description (first paragraph, not truncated)
                     doc_lines = child.get('doc', '').strip().split('\n')
                     if doc_lines and doc_lines[0]:
@@ -203,9 +207,8 @@ class FernRenderer(RendererBase):
                 for child in children_by_type["function"]:
                     full_name = child["full_name"]
                     short_name = full_name.split('.')[-1]
-                    # Create proper anchor that matches the header (use full name for anchor)
-                    anchor = self._create_anchor(full_name)
-                    name_link = f"[`{short_name}`](#{anchor})"
+                    # Use context-aware linking (same-page anchor vs cross-page)
+                    name_link = self._get_cross_reference_link(full_name, short_name, item["full_name"])
                     # Get full description (first paragraph, not truncated)
                     doc_lines = child.get('doc', '').strip().split('\n')
                     if doc_lines and doc_lines[0]:
@@ -251,24 +254,30 @@ class FernRenderer(RendererBase):
     def render_class(self, item: ItemData) -> t.Iterable[str]:
         """Create the content for a class."""
         short_name = item["full_name"].split(".")[-1]
+        full_name = item["full_name"]
+        
+        # Add anchor for linking
+        anchor_id = self._generate_anchor_id(full_name)
+        yield f'<Anchor id="{anchor_id}" />'
+        yield ""
         
         # Build class signature with constructor args
-        constructor = self.get_item(f"{item['full_name']}.__init__")
-        sig = short_name
+        constructor = self.get_item(f"{full_name}.__init__")
         if constructor and "args" in constructor:
             args = self.format_args(
                 constructor["args"], self.show_annotations(item), ignore_self="self"
             )
-            sig += f"({args})"
-
-        # Class signature in code block (no header - code block IS the header)
-        full_name = item["full_name"]
-        yield "```python"
-        if constructor and "args" in constructor and args.strip():
-            yield f"class {item['full_name']}({args})"
+            if args.strip():
+                code_content = f"class {full_name}({args})"
+            else:
+                code_content = f"class {full_name}"
         else:
-            yield f"class {item['full_name']}"
-        yield "```"
+            code_content = f"class {full_name}"
+
+        # Use enhanced code block formatting with potential links
+        formatted_code = self._format_code_block_with_links(code_content, "python")
+        for line in formatted_code.split('\n'):
+            yield line
         yield ""
 
         # Class content (wrapped in HTML div for proper indentation)
@@ -282,18 +291,14 @@ class FernRenderer(RendererBase):
             content_lines.append(f"**Bases**: {base_list}")
             content_lines.append("")
 
-        # Class docstring
+        # Class docstring - simple approach like MyST
         if self.show_docstring(item):
-            content_lines.extend(self._format_docstring_sections(item['doc']))
-
-            # Optionally merge __init__ docstring
-            if self.config.class_docstring == "merge":
-                init_item = self.get_item(f"{item['full_name']}.__init__")
-                if init_item and init_item.get('doc'):
-                    content_lines.append("### Initialization")
-                    content_lines.append("")
-                    content_lines.extend(self._format_docstring_sections(init_item['doc']))
-                    content_lines.append("")
+            raw_docstring = item.get('doc', '').strip()
+            if raw_docstring:
+                processed_docstring = self._convert_myst_directives(raw_docstring)
+                escaped_docstring = self._escape_fern_content(processed_docstring)
+                content_lines.append(escaped_docstring)
+                content_lines.append("")
 
         if content_lines and any(line.strip() for line in content_lines):
             for line in content_lines:
@@ -354,16 +359,20 @@ class FernRenderer(RendererBase):
         properties = item.get("properties", [])
         if properties:
             decorator_list = []
-            for prop in ("abstractmethod", "classmethod"):
+            for prop in ("abstractmethod", "async", "classmethod", "final", "staticmethod"):
                 if prop in properties:
                     decorator_list.append(f"`@{prop}`")
             if decorator_list:
                 content_lines.append(f"**Decorators**: {', '.join(decorator_list)}")
                 content_lines.append("")
         
-        # Property docstring
+        # Property docstring - simple approach like MyST
         if self.show_docstring(item):
-            content_lines.extend(self._format_docstring_sections(item['doc']))
+            raw_docstring = item.get('doc', '').strip()
+            if raw_docstring:
+                processed_docstring = self._convert_myst_directives(raw_docstring)
+                escaped_docstring = self._escape_fern_content(processed_docstring)
+                content_lines.append(escaped_docstring)
 
         if content_lines and any(line.strip() for line in content_lines):
             for line in content_lines:
@@ -387,13 +396,20 @@ class FernRenderer(RendererBase):
         """Create the content for a data item."""
         full_name = item["full_name"]
         
-        # Data signature in code block (no header - code block IS the header)
-        yield "```python"
+        # Add anchor for linking
+        anchor_id = self._generate_anchor_id(full_name)
+        yield f'<Anchor id="{anchor_id}" />'
+        yield ""
+        
+        # Data signature in code block with enhanced formatting
         if item.get("annotation"):
-            yield f"{full_name}: {self.format_annotation(item['annotation'])}"
+            code_content = f"{full_name}: {self.format_annotation(item['annotation'])}"
         else:
-            yield f"{full_name}"
-        yield "```"
+            code_content = f"{full_name}"
+        
+        formatted_code = self._format_code_block_with_links(code_content, "python")
+        for line in formatted_code.split('\n'):
+            yield line
         yield ""
         
         # Data content (wrapped in HTML div for proper indentation)
@@ -423,7 +439,11 @@ class FernRenderer(RendererBase):
         if self.show_docstring(item):
             if content_lines:
                 content_lines.append("")
-            content_lines.extend(self._format_docstring_sections(item['doc']))
+            raw_docstring = item.get('doc', '').strip()
+            if raw_docstring:
+                processed_docstring = self._convert_myst_directives(raw_docstring)
+                escaped_docstring = self._escape_fern_content(processed_docstring)
+                content_lines.append(escaped_docstring)
             
         if content_lines and any(line.strip() for line in content_lines):
             for line in content_lines:
@@ -438,7 +458,7 @@ class FernRenderer(RendererBase):
     def generate_summary(
         self, objects: list[ItemData], alias: dict[str, str] | None = None
     ) -> t.Iterable[str]:
-        """Generate a summary of the objects."""
+        """Generate a summary table with cross-reference links."""
         alias = alias or {}
         
         yield "| Name | Description |"
@@ -448,161 +468,17 @@ class FernRenderer(RendererBase):
             full_name = item["full_name"]
             display_name = alias.get(full_name, full_name.split(".")[-1])
             
+            # Create cross-reference link to the item
+            link = self._get_cross_reference_link(full_name, display_name)
+            
             # Get first line of docstring for description
             doc = item.get('doc', '').strip()
             description = doc.split('\n')[0] if doc else ""
             if len(description) > 50:
                 description = description[:47] + "..."
             
-            yield f"| `{display_name}` | {description} |"
+            yield f"| {link} | {description} |"
 
-    def _format_docstring_sections(self, docstring: str, item: ItemData | None = None) -> t.Iterable[str]:
-        """Parse docstring into structured sections like Parameters, Returns, etc."""
-        if not docstring.strip():
-            return
-            
-        lines = docstring.strip().split('\n')
-        
-        # Parse into sections
-        sections = {"description": [], "parameters": [], "returns": [], "raises": []}
-        current_section = "description"
-        
-        i = 0
-        while i < len(lines):
-            line = lines[i]
-            line_stripped = line.strip()
-            line_lower = line_stripped.lower()
-            
-            # Check for section headers (Google/Numpy style)
-            if line_lower in ('args:', 'arguments:', 'parameters:', 'params:'):
-                current_section = "parameters"
-                i += 1
-                continue
-            elif line_lower in ('returns:', 'return:', 'yields:', 'yield:'):
-                current_section = "returns"
-                i += 1
-                continue
-            elif line_lower in ('raises:', 'raise:', 'except:', 'exceptions:'):
-                current_section = "raises"
-                i += 1
-                continue
-            
-            # Check for RST-style parameters
-            elif line_stripped.startswith(':param '):
-                if ':' in line_stripped[7:]:
-                    param_part = line_stripped[7:]
-                    if ':' in param_part:
-                        name, desc = param_part.split(':', 1)
-                        sections["parameters"].append(f"**{name.strip()}**: {desc.strip()}")
-                i += 1
-                continue
-                
-            elif line_stripped.startswith((':return:', ':returns:', ':rtype:')):
-                if ':' in line_stripped:
-                    parts = line_stripped.split(':', 2)
-                    if len(parts) >= 3:
-                        sections["returns"].append(parts[2].strip())
-                i += 1
-                continue
-            
-            # Add line to current section
-            sections[current_section].append(line)
-            i += 1
-        
-        # Output formatted sections
-        # Description first
-        if sections["description"]:
-            desc_lines = []
-            for line in sections["description"]:
-                desc_lines.append(line)
-            desc_text = '\n'.join(desc_lines).strip()
-            if desc_text:
-                yield self._escape_fern_content(desc_text)
-                yield ""
-        
-        # Parameters section
-        if sections["parameters"]:
-            # If we have function item data, use ParamField components
-            if item and item.get("args"):
-                yield "**Parameters:**"
-                yield ""
-                
-                # Build parameter info map from function signature
-                param_info = {}
-                for prefix, name, annotation, default in item["args"]:
-                    param_info[name] = {
-                        "type": annotation,
-                        "default": default
-                    }
-                
-                # Render each parameter as ParamField
-                for line in sections["parameters"]:
-                    if line.strip() and ':' in line:
-                        param_line = line.strip()
-                        if ':' in param_line:
-                            name, desc = param_line.split(':', 1)
-                            param_name = name.strip()
-                            escaped_desc = self._escape_fern_content(desc.strip())
-                            
-                            # Get type and default from function signature
-                            if param_name in param_info:
-                                param_type = param_info[param_name]["type"]
-                                param_default = param_info[param_name]["default"]
-                                
-                                # Build ParamField component
-                                param_field = f'<ParamField path="{param_name}"'
-                                if param_type:
-                                    param_field += f' type="{param_type}"'
-                                if param_default is not None and param_default != "None":
-                                    param_field += f' default="{param_default}"'
-                                param_field += '>'
-                                
-                                yield param_field
-                                if escaped_desc:
-                                    yield f"  {escaped_desc}"
-                                yield "</ParamField>"
-                                yield ""
-            else:
-                # Fallback to old markdown format
-                yield "**Parameters:**"
-                yield ""
-                for line in sections["parameters"]:
-                    if line.strip():
-                        # Google style: "    param_name: description"
-                        if line.strip() and ':' in line:
-                            # Remove leading whitespace and parse
-                            param_line = line.strip()
-                            if ':' in param_line:
-                                name, desc = param_line.split(':', 1)
-                                escaped_name = self._escape_fern_content(name.strip())
-                                escaped_desc = self._escape_fern_content(desc.strip())
-                                yield f"- **{escaped_name}**: {escaped_desc}"
-                            else:
-                                escaped_param = self._escape_fern_content(param_line)
-                                yield f"- {escaped_param}"
-                        elif line.strip():
-                            # Continuation line
-                            escaped_line = self._escape_fern_content(line.strip())
-                            yield f"  {escaped_line}"
-                yield ""
-            
-        # Returns section
-        if sections["returns"]:
-            yield "**Returns:**"
-            yield ""
-            for line in sections["returns"]:
-                if line.strip():
-                    yield self._escape_fern_content(line.strip())
-            yield ""
-            
-        # Raises section
-        if sections["raises"]:
-            yield "**Raises:**"
-            yield ""
-            for line in sections["raises"]:
-                if line.strip():
-                    yield self._escape_fern_content(line.strip())
-            yield ""
 
     def _format_args_multiline(self, args_info, include_annotations: bool = True, ignore_self: str | None = None) -> str:
         """Format function arguments with newlines for better readability."""
@@ -675,40 +551,244 @@ class FernRenderer(RendererBase):
         return line
     
     def _escape_fern_content(self, content: str) -> str:
-        """Escape content for Fern compatibility (braces and HTML tags)."""
+        """Escape content for Fern/MDX compatibility - simple and direct approach."""
         import re
         
         # Don't escape if it's already a Jinja template 
         if self._contains_jinja_template(content):
             return content
         
-        # First, find and temporarily replace HTML-like tags (including those with braces)
-        # Pattern matches: <tag>, <{tag}>, <{answer_tag}>, </think>, etc.
-        tag_pattern = r'<[^<>]*(?:\\?\{[^}]*\\?\}[^<>]*)*[^<>]*>'
-        tags = []
-        def replace_tag(match):
-            tag = match.group(0)
-            placeholder = f"__FERN_TAG_{len(tags)}__"
-            tags.append(tag)
-            return placeholder
+        # Split content by code blocks (both triple and single backticks) to preserve them
+        code_block_pattern = r'(```[\s\S]*?```|`[^`]*?`)'
+        parts = re.split(code_block_pattern, content)
         
-        temp_content = re.sub(tag_pattern, replace_tag, content)
+        escaped_parts = []
+        for i, part in enumerate(parts):
+            if i % 2 == 0:  # Regular text (not inside code blocks)
+                # Escape HTML-like tags: <tag> -> \<tag\>
+                part = part.replace('<', '\\<').replace('>', '\\>')
+                # Escape curly braces: {text} -> \{text\}
+                part = part.replace('{', '\\{').replace('}', '\\}')
+                escaped_parts.append(part)
+            else:  # Inside code blocks - don't escape anything
+                escaped_parts.append(part)
         
-        # Now escape curly braces in the remaining content
-        escaped_content = temp_content.replace('{', '\\{').replace('}', '\\}')
+        return ''.join(escaped_parts)
+
+    def _convert_myst_directives(self, content: str) -> str:
+        """Convert MyST directives to Fern format."""
+        import re
         
-        # Restore tags wrapped in backticks
-        for i, tag in enumerate(tags):
-            placeholder = f"__FERN_TAG_{i}__"
-            # Escape any braces inside the tag itself for consistency
-            escaped_tag = tag.replace('{', '\\{').replace('}', '\\}')
-            escaped_content = escaped_content.replace(placeholder, f'`{escaped_tag}`')
+        # Simple approach: Just replace {doctest} with python, don't mess with closing backticks
+        content = content.replace('```{doctest}', '```python')
         
-        return escaped_content
+        # Also fix malformed python blocks that are missing closing backticks
+        # Look for ```python at start of line that doesn't have a matching closing ```
+        lines = content.split('\n')
+        in_code_block = False
+        result_lines = []
+        
+        for line in lines:
+            if line.strip().startswith('```python'):
+                in_code_block = True
+                result_lines.append(line)
+            elif line.strip() == '```' and in_code_block:
+                in_code_block = False
+                result_lines.append(line)
+            else:
+                result_lines.append(line)
+        
+        # If we ended still in a code block, add closing backticks
+        if in_code_block:
+            result_lines.append('```')
+        
+        content = '\n'.join(result_lines)
+        
+        # Handle other common MyST directives  
+        directive_replacements = {
+            r'\{note\}': '<Note>',
+            r'\{warning\}': '<Warning>',
+            r'\{tip\}': '<Tip>',
+            r'\{important\}': '<Important>',
+        }
+        
+        for pattern, replacement in directive_replacements.items():
+            content = re.sub(pattern, replacement, content)
+        
+        return content
+
 
     def _generate_slug(self, full_name: str) -> str:
         """Generate slug from full dotted name: nemo_curator.utils.grouping → nemo-curator-utils-grouping"""
         return full_name.replace('.', '-').replace('_', '-')
+
+    def _generate_anchor_id(self, full_name: str) -> str:
+        """Generate anchor ID from full_name for use in <Anchor> components."""
+        return full_name.replace('.', '').replace('_', '').lower()
+    
+    def _are_on_same_page(self, item1_name: str, item2_name: str) -> bool:
+        """Determine if two items are rendered on the same page."""
+        item1 = self.get_item(item1_name)
+        item2 = self.get_item(item2_name)
+        
+        if not item1 or not item2:
+            return False
+        
+        # Each item type gets its own page, except for direct children
+        item1_page = self._get_page_for_item(item1_name)
+        item2_page = self._get_page_for_item(item2_name)
+        
+        return item1_page == item2_page
+    
+    def _get_page_for_item(self, full_name: str) -> str:
+        """Get the page where this item is rendered.
+        
+        Based on CLI logic: only packages and modules get their own files.
+        All other items (classes, functions, methods, etc.) are rendered
+        on their parent module/package page.
+        """
+        item = self.get_item(full_name)
+        if not item:
+            return full_name
+        
+        item_type = item['type']
+        parts = full_name.split('.')
+        
+        # Only packages and modules get their own dedicated pages/files
+        if item_type in ('package', 'module'):
+            return full_name
+        
+        # All other items (classes, functions, methods, properties, attributes, data) 
+        # are rendered on their parent module/package page
+        else:
+            # Find the parent module or package
+            for i in range(len(parts) - 1, 0, -1):
+                parent_name = '.'.join(parts[:i])
+                parent_item = self.get_item(parent_name)
+                if parent_item and parent_item['type'] in ('package', 'module'):
+                    return parent_name
+            
+            # Fallback - shouldn't happen, but return the root module
+            return parts[0] if parts else full_name
+
+    def _get_cross_reference_link(self, target_name: str, display_name: str = None, current_page: str = None) -> str:
+        """Generate cross-reference link to another documented object."""
+        # Check if target exists in our database
+        target_item = self.get_item(target_name)
+        if target_item is None:
+            # Return plain text if target not found
+            return f"`{display_name or target_name}`"
+        
+        link_text = display_name or target_name.split('.')[-1]
+        anchor_id = self._generate_anchor_id(target_name)
+        
+        # Determine if target is on same page as current page
+        if current_page and self._are_on_same_page(target_name, current_page):
+            # Same page - use anchor link only
+            return f"[`{link_text}`](#{anchor_id})"
+        else:
+            # Different page - use cross-page link  
+            target_page = self._get_page_for_item(target_name)
+            target_page_slug = self._generate_slug(target_page)
+            return f"[`{link_text}`]({target_page_slug}#{anchor_id})"
+
+    def _format_code_block_with_links(self, code: str, language: str = "python") -> str:
+        """Format code block with deep linking using CodeBlock component."""
+        # Find documented objects in the code and create link mapping
+        links = {}
+        
+        # Look for documented class/function names in the code
+        # Iterate through all item types to find all items
+        for item_type in ('package', 'module', 'class', 'function', 'method', 'data', 'attribute', 'property'):
+            for item in self._db.get_by_type(item_type):
+                full_name = item['full_name']
+                short_name = full_name.split('.')[-1]
+                
+                # Only link if the short name appears in the code AS A WHOLE WORD
+                import re
+                word_pattern = r'\b' + re.escape(short_name) + r'\b'
+                if re.search(word_pattern, code) and item['type'] in ('class', 'function', 'method'):
+                    # Use the corrected page mapping logic
+                    page_name = self._get_page_for_item(full_name) 
+                    page_slug = self._generate_slug(page_name)
+                    anchor_id = self._generate_anchor_id(full_name)
+                    links[short_name] = f"{page_slug}#{anchor_id}"
+        
+        # Generate CodeBlock component with links if any found
+        if links:
+            links_json = "{" + ", ".join(f'"{k}": "{v}"' for k, v in links.items()) + "}"
+            return f'<CodeBlock\n  links={{{links_json}}}\n>\n\n```{language}\n{code}\n```\n\n</CodeBlock>'
+        else:
+            return f'```{language}\n{code}\n```'
+
+    def _convert_py_obj_references(self, text: str) -> str:
+        """Convert MyST {py:obj} references to Fern cross-reference links."""
+        import re
+        
+        # Pattern to match {py:obj}`target_name` or {py:obj}`display_text <target_name>`
+        pattern = r'\{py:obj\}`([^<>`]+)(?:\s*<([^>]+)>)?\`'
+        
+        def replace_ref(match):
+            content = match.group(1)
+            target = match.group(2)
+            
+            if target:
+                # Format: {py:obj}`display_text <target_name>`
+                display_text = content.strip()
+                target_name = target.strip()
+            else:
+                # Format: {py:obj}`target_name`
+                target_name = content.strip()
+                display_text = None
+            
+            return self._get_cross_reference_link(target_name, display_text)
+        
+        return re.sub(pattern, replace_ref, text)
+
+    def validate_all_links(self, output_dir: str = None) -> dict[str, list[str]]:
+        """Validate all generated links and return any issues found.
+        
+        Fast lightweight validation focusing on core link integrity.
+        
+        Returns:
+            Dict with 'errors' and 'warnings' keys containing lists of issues.
+        """
+        issues = {"errors": [], "warnings": []}
+        
+        # Sample a few items to validate the core logic works
+        sample_items = []
+        for item_type in ("package", "module", "class", "function"):
+            type_items = list(self._db.get_by_type(item_type))
+            if type_items:
+                sample_items.append(type_items[0])  # Just take first item of each type
+        
+        for item in sample_items:
+            full_name = item["full_name"]
+            
+            # Validate that we can determine the correct page for this item
+            try:
+                page_name = self._get_page_for_item(full_name)
+                anchor_id = self._generate_anchor_id(full_name)
+                
+                if not anchor_id:
+                    issues["errors"].append(f"Empty anchor ID generated for {full_name}")
+                
+                # Test cross-reference link generation
+                test_link = self._get_cross_reference_link(full_name, None, "test.module")
+                if not test_link or test_link == full_name:
+                    issues["warnings"].append(f"Link generation may have issues for {full_name}")
+                    
+            except Exception as e:
+                issues["errors"].append(f"Error processing {full_name}: {e}")
+        
+        # Quick check: verify some common patterns
+        packages = list(self._db.get_by_type("package"))
+        modules = list(self._db.get_by_type("module")) 
+        
+        if not packages and not modules:
+            issues["errors"].append("No packages or modules found - this seems wrong")
+        
+        return issues
 
     def generate_navigation_yaml(self) -> str:
         """Generate navigation YAML for Fern docs.yml following sphinx autodoc2 toctree logic."""
@@ -758,7 +838,7 @@ class FernRenderer(RendererBase):
             section_item = {
                 "section": full_name.split(".")[-1],  # Use short name for section
                 "skip-slug": True,
-                "path": f"{slug}.md",
+                "path": f"{slug}{self.EXTENSION}",
                 "contents": []
             }
             
@@ -773,7 +853,7 @@ class FernRenderer(RendererBase):
                 child_slug = self._generate_slug(child["full_name"])
                 section_item["contents"].append({
                     "page": child["full_name"].split(".")[-1],  # Use short name
-                    "path": f"{child_slug}.md"
+                    "path": f"{child_slug}{self.EXTENSION}"
                 })
             
             return section_item
@@ -781,5 +861,5 @@ class FernRenderer(RendererBase):
             # Leaf item - just a page
             return {
                 "page": full_name.split(".")[-1],  # Use short name
-                "path": f"{slug}.md"
+                "path": f"{slug}{self.EXTENSION}"
             }
