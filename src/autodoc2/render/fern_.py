@@ -641,7 +641,12 @@ class FernRenderer(RendererBase):
         return item1_page == item2_page
     
     def _get_page_for_item(self, full_name: str) -> str:
-        """Get the page where this item is rendered."""
+        """Get the page where this item is rendered.
+        
+        Based on CLI logic: only packages and modules get their own files.
+        All other items (classes, functions, methods, etc.) are rendered
+        on their parent module/package page.
+        """
         item = self.get_item(full_name)
         if not item:
             return full_name
@@ -649,25 +654,22 @@ class FernRenderer(RendererBase):
         item_type = item['type']
         parts = full_name.split('.')
         
-        # Only packages, modules, and classes get their own dedicated pages
-        if item_type in ('package', 'module', 'class'):
+        # Only packages and modules get their own dedicated pages/files
+        if item_type in ('package', 'module'):
             return full_name
         
-        # Functions, methods, properties, attributes, data are rendered on their parent's page
-        elif item_type in ('function', 'method', 'property', 'attribute', 'data'):
-            # Find the parent (class, module, or package)
+        # All other items (classes, functions, methods, properties, attributes, data) 
+        # are rendered on their parent module/package page
+        else:
+            # Find the parent module or package
             for i in range(len(parts) - 1, 0, -1):
                 parent_name = '.'.join(parts[:i])
                 parent_item = self.get_item(parent_name)
-                if parent_item and parent_item['type'] in ('package', 'module', 'class'):
+                if parent_item and parent_item['type'] in ('package', 'module'):
                     return parent_name
             
-            # Fallback - shouldn't happen
-            return full_name
-        
-        else:
-            # Unknown type, assume it gets its own page
-            return full_name
+            # Fallback - shouldn't happen, but return the root module
+            return parts[0] if parts else full_name
 
     def _get_cross_reference_link(self, target_name: str, display_name: str = None, current_page: str = None) -> str:
         """Generate cross-reference link to another documented object."""
@@ -706,23 +708,9 @@ class FernRenderer(RendererBase):
                 import re
                 word_pattern = r'\b' + re.escape(short_name) + r'\b'
                 if re.search(word_pattern, code) and item['type'] in ('class', 'function', 'method'):
-                    # Determine the correct page and anchor
-                    if item['type'] == 'method':
-                        # Methods appear on their class page, but we need the module page slug for the current context
-                        class_parts = full_name.split('.')
-                        if len(class_parts) >= 3:  # module.Class.method
-                            module_name = '.'.join(class_parts[:-2])  # Just the module
-                            page_slug = self._generate_slug(module_name)
-                        else:
-                            page_slug = self._generate_slug('.'.join(class_parts[:-1]))
-                    else:
-                        # Classes and functions link to their own pages
-                        if item['type'] in ('class', 'function'):
-                            page_slug = self._generate_slug(full_name)
-                        else:
-                            parent_name = '.'.join(full_name.split('.')[:-1]) if '.' in full_name else full_name
-                            page_slug = self._generate_slug(parent_name)
-                    
+                    # Use the corrected page mapping logic
+                    page_name = self._get_page_for_item(full_name) 
+                    page_slug = self._generate_slug(page_name)
                     anchor_id = self._generate_anchor_id(full_name)
                     links[short_name] = f"{page_slug}#{anchor_id}"
         
@@ -756,6 +744,51 @@ class FernRenderer(RendererBase):
             return self._get_cross_reference_link(target_name, display_text)
         
         return re.sub(pattern, replace_ref, text)
+
+    def validate_all_links(self, output_dir: str = None) -> dict[str, list[str]]:
+        """Validate all generated links and return any issues found.
+        
+        Fast lightweight validation focusing on core link integrity.
+        
+        Returns:
+            Dict with 'errors' and 'warnings' keys containing lists of issues.
+        """
+        issues = {"errors": [], "warnings": []}
+        
+        # Sample a few items to validate the core logic works
+        sample_items = []
+        for item_type in ("package", "module", "class", "function"):
+            type_items = list(self._db.get_by_type(item_type))
+            if type_items:
+                sample_items.append(type_items[0])  # Just take first item of each type
+        
+        for item in sample_items:
+            full_name = item["full_name"]
+            
+            # Validate that we can determine the correct page for this item
+            try:
+                page_name = self._get_page_for_item(full_name)
+                anchor_id = self._generate_anchor_id(full_name)
+                
+                if not anchor_id:
+                    issues["errors"].append(f"Empty anchor ID generated for {full_name}")
+                
+                # Test cross-reference link generation
+                test_link = self._get_cross_reference_link(full_name, None, "test.module")
+                if not test_link or test_link == full_name:
+                    issues["warnings"].append(f"Link generation may have issues for {full_name}")
+                    
+            except Exception as e:
+                issues["errors"].append(f"Error processing {full_name}: {e}")
+        
+        # Quick check: verify some common patterns
+        packages = list(self._db.get_by_type("package"))
+        modules = list(self._db.get_by_type("module")) 
+        
+        if not packages and not modules:
+            issues["errors"].append("No packages or modules found - this seems wrong")
+        
+        return issues
 
     def generate_navigation_yaml(self) -> str:
         """Generate navigation YAML for Fern docs.yml following sphinx autodoc2 toctree logic."""
