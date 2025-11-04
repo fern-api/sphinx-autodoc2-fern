@@ -20,7 +20,7 @@ urls = {Home = "https://github.com/fern-api/py2fern"}
 requires-python = ">=3.8"
 dependencies = [
     "astroid>=2.7,<4",
-    "tomli; python_version<'3.11'", 
+    "tomli; python_version<'3.11'",
     "typing-extensions",
     "typer[all]",
     "PyYAML"
@@ -31,6 +31,8 @@ testing = [
     "pytest",
     "pytest-regressions", 
     "pytest-cov",
+    "PyYAML",  # Needed for navigation YAML tests
+    "types-PyYAML",  # Type stubs for mypy
 ]
 
 [project.scripts]
