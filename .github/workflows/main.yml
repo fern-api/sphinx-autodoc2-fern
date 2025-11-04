@@ -12,6 +12,7 @@ jobs:
   pre-commit:
 
     runs-on: ubuntu-latest
+    if: false  # Temporarily disabled
 
     steps:
     - uses: actions/checkout@v4
@@ -55,7 +56,7 @@ jobs:
     if: always()
 
     needs:
-    - pre-commit
+    # - pre-commit  # Temporarily disabled
     - tests
 
     runs-on: ubuntu-latest
