@@ -283,6 +283,23 @@ def write(
     nav_path.write_text(nav_content, "utf8")
     console.print(f"Navigation written to: {nav_path}")
 
+    # Validate all links
+    console.print("[bold]Validating links...[/bold]")
+    validation_results = renderer_instance.validate_all_links(str(output))
+    
+    if validation_results["errors"]:
+        console.print(f"[red]❌ {len(validation_results['errors'])} link errors found:[/red]")
+        for error in validation_results["errors"]:
+            console.print(f"  [red]• {error}[/red]")
+    
+    if validation_results["warnings"]:
+        console.print(f"[yellow]⚠️  {len(validation_results['warnings'])} link warnings:[/yellow]")
+        for warning in validation_results["warnings"]:
+            console.print(f"  [yellow]• {warning}[/yellow]")
+    
+    if not validation_results["errors"] and not validation_results["warnings"]:
+        console.print("[green]✅ All links validated successfully![/green]")
+
     # remove any files that are no longer needed
     if clean:
         console.print("[bold]Cleaning old files[/bold]")
