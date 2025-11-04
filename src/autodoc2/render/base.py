@@ -1,4 +1,5 @@
 """Convert the database items into documentation."""
+
 from __future__ import annotations
 
 import abc

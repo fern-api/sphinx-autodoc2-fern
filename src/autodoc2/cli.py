@@ -255,19 +255,20 @@ def write(
             progress.console.print(f"[yellow]Warning[/yellow] {msg} [{type_.value}]")
 
         config = Config()
-        
+
         # Always use FernRenderer
         from autodoc2.render.fern_ import FernRenderer
+
         render_class = FernRenderer
-        
+
         for mod_name in to_write:
             progress.update(task, advance=1, description=mod_name)
             content = "\n".join(
                 render_class(db, config, warn=_warn).render_item(mod_name)
             )
-            
+
             # Use hyphens in filenames to match Fern slugs
-            filename = mod_name.replace('.', '-').replace('_', '-')
+            filename = mod_name.replace(".", "-").replace("_", "-")
             out_path = output / (filename + render_class.EXTENSION)
             paths.append(out_path)
             if out_path.exists() and out_path.read_text("utf8") == content:
@@ -286,17 +287,21 @@ def write(
     # Validate all links
     console.print("[bold]Validating links...[/bold]")
     validation_results = renderer_instance.validate_all_links(str(output))
-    
+
     if validation_results["errors"]:
-        console.print(f"[red]❌ {len(validation_results['errors'])} link errors found:[/red]")
+        console.print(
+            f"[red]❌ {len(validation_results['errors'])} link errors found:[/red]"
+        )
         for error in validation_results["errors"]:
             console.print(f"  [red]• {error}[/red]")
-    
+
     if validation_results["warnings"]:
-        console.print(f"[yellow]⚠️  {len(validation_results['warnings'])} link warnings:[/yellow]")
+        console.print(
+            f"[yellow]⚠️  {len(validation_results['warnings'])} link warnings:[/yellow]"
+        )
         for warning in validation_results["warnings"]:
             console.print(f"  [yellow]• {warning}[/yellow]")
-    
+
     if not validation_results["errors"] and not validation_results["warnings"]:
         console.print("[green]✅ All links validated successfully![/green]")
 

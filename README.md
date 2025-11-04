@@ -26,7 +26,7 @@ py2fern write /path/to/your/package --output ./docs/api
 
 This creates:
 - **MDX files** with Fern-compatible frontmatter and slugs
-- **`navigation.yml`** for Fern docs structure 
+- **`navigation.yml`** for Fern docs structure
 
 ## Acknowledgments
 
