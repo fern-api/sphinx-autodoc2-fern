@@ -29,9 +29,10 @@ dependencies = [
 [project.optional-dependencies]
 testing = [
     "pytest",
-    "pytest-regressions",
+    "pytest-regressions", 
     "pytest-cov",
     "PyYAML",  # Needed for navigation YAML tests
+    "types-PyYAML",  # Type stubs for mypy
 ]
 
 [project.scripts]

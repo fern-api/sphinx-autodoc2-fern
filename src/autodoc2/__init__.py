@@ -3,14 +3,14 @@
 A simplified fork of sphinx-autodoc2 focused purely on Python → Fern markdown output.
 """
 
-import os
 import subprocess
+from pathlib import Path
 
 
-def _get_version():
+def _get_version() -> str:
     """Get version from git tag or fallback to default."""
     try:
-        if os.path.exists(".git"):
+        if Path(".git").exists():
             result = subprocess.run(
                 ["git", "describe", "--tags", "--exact-match", "HEAD"],
                 capture_output=True,

@@ -123,8 +123,8 @@ def test_cross_reference_linking(tmp_path: Path):
     assert len(same_page_links) > 0, "Should have same-page anchor links"
 
     # Cross-page links (page + anchor): [`submod`](package-submod#anchor)
-    cross_page_links = re.findall(r"\[`\w+`\]\([\w-]+(?:#\w+)?\)", content)
     # Note: cross-page links may or may not have anchors depending on target type
+    # Our test package may not have cross-page links, so we don't assert on them
 
     # Test link format consistency
     for link in same_page_links:
