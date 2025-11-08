@@ -65,7 +65,7 @@ class FernRenderer(RendererBase):
 
         # Add anchor for linking
         anchor_id = self._generate_anchor_id(full_name)
-        yield f'<Anchor id="{anchor_id}" />'
+        yield f'<Anchor id="{anchor_id}">'
         yield ""
 
         # Function signature in code block (no header - code block IS the header)
@@ -99,6 +99,8 @@ class FernRenderer(RendererBase):
         formatted_code = self._format_code_block_with_links(code_content, "python")
         for line in formatted_code.split("\n"):
             yield line
+
+        yield "</Anchor>"
         yield ""
 
         # Function docstring - use simple approach like MyST
@@ -110,7 +112,6 @@ class FernRenderer(RendererBase):
                 processed_docstring = self._convert_myst_directives(raw_docstring)
                 escaped_docstring = self._escape_fern_content(processed_docstring)
                 yield escaped_docstring
-        yield ""
 
     def render_module(self, item: ItemData) -> t.Iterable[str]:
         """Create the content for a module."""
@@ -251,8 +252,11 @@ class FernRenderer(RendererBase):
                 yield "### Data"
                 yield ""
                 for child in children_by_type["data"]:
-                    name = child["full_name"].split(".")[-1]
-                    yield f"`{name}`"
+                    full_name = child["full_name"]
+                    short_name = full_name.split(".")[-1]
+                    # Create anchor link to API section
+                    anchor_id = self._generate_anchor_id(full_name)
+                    yield f"[`{short_name}`](#{anchor_id})"
                 yield ""
 
         # API section with detailed documentation
@@ -278,7 +282,7 @@ class FernRenderer(RendererBase):
 
         # Add anchor for linking
         anchor_id = self._generate_anchor_id(full_name)
-        yield f'<Anchor id="{anchor_id}" />'
+        yield f'<Anchor id="{anchor_id}">'
         yield ""
 
         # Build class signature with constructor args
@@ -298,6 +302,8 @@ class FernRenderer(RendererBase):
         formatted_code = self._format_code_block_with_links(code_content, "python")
         for line in formatted_code.split("\n"):
             yield line
+
+        yield "</Anchor>"
         yield ""
 
         # Class content (wrapped in HTML div for proper indentation)
@@ -424,7 +430,7 @@ class FernRenderer(RendererBase):
 
         # Add anchor for linking
         anchor_id = self._generate_anchor_id(full_name)
-        yield f'<Anchor id="{anchor_id}" />'
+        yield f'<Anchor id="{anchor_id}">'
         yield ""
 
         # Data signature in code block with enhanced formatting
@@ -436,6 +442,8 @@ class FernRenderer(RendererBase):
         formatted_code = self._format_code_block_with_links(code_content, "python")
         for line in formatted_code.split("\n"):
             yield line
+
+        yield "</Anchor>"
         yield ""
 
         # Data content (wrapped in HTML div for proper indentation)
@@ -479,7 +487,6 @@ class FernRenderer(RendererBase):
                     yield formatted_line
                 else:
                     yield ""
-        yield ""
 
     def generate_summary(
         self, objects: list[ItemData], alias: dict[str, str] | None = None
@@ -750,12 +757,8 @@ class FernRenderer(RendererBase):
                 import re
 
                 word_pattern = r"\b" + re.escape(short_name) + r"\b"
-                if re.search(word_pattern, code) and item["type"] in (
-                    "class",
-                    "function",
-                    "method",
-                ):
-                    # Use the corrected page mapping logic
+                if re.search(word_pattern, code):
+                    # Link all documented items that appear in code
                     page_name = self._get_page_for_item(full_name)
                     page_slug = self._generate_slug(page_name)
                     anchor_id = self._generate_anchor_id(full_name)
