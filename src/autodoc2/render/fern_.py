@@ -75,18 +75,19 @@ class FernRenderer(RendererBase):
             else ""
         )
 
-        # Check if we should use inline or multiline formatting
-        # Count non-self parameters
-        non_self_args = [arg for arg in item.get("args", []) if arg[1] != "self"]
-        use_inline = len(non_self_args) <= 1
+        # Use multiline format only if there are actual parameters (excluding self)
+        args_list = item.get("args", [])
+        # Filter out 'self' and 'cls' to determine if there are real parameters
+        real_params = [arg for arg in args_list if arg[1] not in ("self", "cls")]
+        has_real_params = len(real_params) > 0
 
-        if use_inline:
-            # Single parameter or no parameters - use inline format
-            args_formatted = self.format_args(item["args"], show_annotations)
+        if not has_real_params:
+            # No real parameters (empty or only self/cls) - use inline format
+            args_formatted = self.format_args(args_list, show_annotations)
             code_content = f"{full_name}({args_formatted}){return_annotation}"
         else:
-            # Multiple parameters - use multiline format
-            args_formatted = self._format_args_multiline(item["args"], show_annotations)
+            # Has real parameters - use multiline format
+            args_formatted = self._format_args_multiline(args_list, show_annotations)
             code_lines = [f"{full_name}("]
             if args_formatted.strip():
                 for line in args_formatted.split("\n"):
@@ -96,7 +97,9 @@ class FernRenderer(RendererBase):
             code_content = "\n".join(code_lines)
 
         # Use enhanced code block formatting with potential links
-        formatted_code = self._format_code_block_with_links(code_content, "python")
+        # Pass the page name (parent module/package) to enable context-aware linking
+        current_page = self._get_page_for_item(full_name)
+        formatted_code = self._format_code_block_with_links(code_content, "python", current_page)
         for line in formatted_code.split("\n"):
             yield line
 
@@ -108,8 +111,9 @@ class FernRenderer(RendererBase):
             # Just yield the raw docstring and let Fern handle it
             raw_docstring = item.get("doc", "").strip()
             if raw_docstring:
-                # Apply MyST directive conversions and escape for MDX
+                # Apply MyST directive conversions, bold section headers, and escape for MDX
                 processed_docstring = self._convert_myst_directives(raw_docstring)
+                processed_docstring = self._bold_docstring_sections(processed_docstring)
                 escaped_docstring = self._escape_fern_content(processed_docstring)
                 yield escaped_docstring
 
@@ -149,17 +153,17 @@ class FernRenderer(RendererBase):
             yield ""
             for child in children_by_type["package"]:
                 name = child["full_name"].split(".")[-1]
-                # Create slug-based link using full dotted name
-                slug = self._generate_slug(child["full_name"])
+                # Create link using nested file path
+                file_path = self._generate_file_path(child["full_name"])
                 doc_summary = (
                     child.get("doc", "").split("\n")[0][:80] if child.get("doc") else ""
                 )
                 if len(child.get("doc", "")) > 80:
                     doc_summary += "..."
                 yield (
-                    f"- **[`{name}`]({slug})** - {doc_summary}"
+                    f"- **[`{name}`]({file_path})** - {doc_summary}"
                     if doc_summary
-                    else f"- **[`{name}`]({slug})**"
+                    else f"- **[`{name}`]({file_path})**"
                 )
             yield ""
 
@@ -168,17 +172,17 @@ class FernRenderer(RendererBase):
             yield ""
             for child in children_by_type["module"]:
                 name = child["full_name"].split(".")[-1]
-                # Create slug-based link using full dotted name
-                slug = self._generate_slug(child["full_name"])
+                # Create link using nested file path
+                file_path = self._generate_file_path(child["full_name"])
                 doc_summary = (
                     child.get("doc", "").split("\n")[0][:80] if child.get("doc") else ""
                 )
                 if len(child.get("doc", "")) > 80:
                     doc_summary += "..."
                 yield (
-                    f"- **[`{name}`]({slug})** - {doc_summary}"
+                    f"- **[`{name}`]({file_path})** - {doc_summary}"
                     if doc_summary
-                    else f"- **[`{name}`]({slug})**"
+                    else f"- **[`{name}`]({file_path})**"
                 )
             yield ""
 
@@ -299,7 +303,9 @@ class FernRenderer(RendererBase):
             code_content = f"class {full_name}"
 
         # Use enhanced code block formatting with potential links
-        formatted_code = self._format_code_block_with_links(code_content, "python")
+        # Pass the page name (parent module/package) to enable context-aware linking
+        current_page = self._get_page_for_item(full_name)
+        formatted_code = self._format_code_block_with_links(code_content, "python", current_page)
         for line in formatted_code.split("\n"):
             yield line
 
@@ -322,6 +328,7 @@ class FernRenderer(RendererBase):
             raw_docstring = item.get("doc", "").strip()
             if raw_docstring:
                 processed_docstring = self._convert_myst_directives(raw_docstring)
+                processed_docstring = self._bold_docstring_sections(processed_docstring)
                 escaped_docstring = self._escape_fern_content(processed_docstring)
                 content_lines.append(escaped_docstring)
                 content_lines.append("")
@@ -403,6 +410,7 @@ class FernRenderer(RendererBase):
             raw_docstring = item.get("doc", "").strip()
             if raw_docstring:
                 processed_docstring = self._convert_myst_directives(raw_docstring)
+                processed_docstring = self._bold_docstring_sections(processed_docstring)
                 escaped_docstring = self._escape_fern_content(processed_docstring)
                 content_lines.append(escaped_docstring)
 
@@ -439,7 +447,9 @@ class FernRenderer(RendererBase):
         else:
             code_content = f"{full_name}"
 
-        formatted_code = self._format_code_block_with_links(code_content, "python")
+        # Pass the page name (parent module/package) to enable context-aware linking
+        current_page = self._get_page_for_item(full_name)
+        formatted_code = self._format_code_block_with_links(code_content, "python", current_page)
         for line in formatted_code.split("\n"):
             yield line
 
@@ -476,6 +486,7 @@ class FernRenderer(RendererBase):
             raw_docstring = item.get("doc", "").strip()
             if raw_docstring:
                 processed_docstring = self._convert_myst_directives(raw_docstring)
+                processed_docstring = self._bold_docstring_sections(processed_docstring)
                 escaped_docstring = self._escape_fern_content(processed_docstring)
                 content_lines.append(escaped_docstring)
 
@@ -656,9 +667,56 @@ class FernRenderer(RendererBase):
 
         return content
 
+    def _bold_docstring_sections(self, content: str) -> str:
+        """Bold common docstring section headers like Args:, Returns:, Raises:"""
+        import re
+        
+        # Bold section headers that appear at the start of a line (with optional whitespace)
+        # Match: Args:, Returns:, Raises:, Parameters:, Yields:, Note:, Examples:, etc.
+        sections_to_bold = [
+            "Args:",
+            "Arguments:",
+            "Parameters:",
+            "Returns:",
+            "Return:",
+            "Yields:",
+            "Yield:",
+            "Raises:",
+            "Raise:",
+            "Throws:",
+            "Throw:",
+            "Note:",
+            "Notes:",
+            "Example:",
+            "Examples:",
+            "See Also:",
+            "Attributes:",
+            "Attribute:",
+        ]
+        
+        for section in sections_to_bold:
+            # Match section header at start of line (with optional whitespace before)
+            pattern = rf'^(\s*)({re.escape(section)})(\s*)$'
+            content = re.sub(pattern, r'\1**\2**\3', content, flags=re.MULTILINE)
+        
+        return content
+
     def _generate_slug(self, full_name: str) -> str:
         """Generate slug from full dotted name: nemo_curator.utils.grouping → nemo-curator-utils-grouping"""
         return full_name.replace(".", "-").replace("_", "-")
+
+    def _generate_file_path(self, full_name: str) -> str:
+        """Generate nested file path from full dotted name.
+        
+        Every item gets its own folder.
+        Examples:
+        - nemo_rl → nemo_rl/nemo_rl/nemo_rl
+        - nemo_rl.algorithms → nemo_rl/algorithms/algorithms
+        - nemo_rl.algorithms.dpo → nemo_rl/algorithms/dpo/dpo
+        """
+        parts = full_name.split(".")
+        # All parts as directories + last part as filename
+        return "/".join(parts) + "/" + parts[-1]
 
     def _generate_anchor_id(self, full_name: str) -> str:
         """Generate anchor ID from full_name for use in <Anchor> components."""
@@ -729,47 +787,49 @@ class FernRenderer(RendererBase):
         else:
             # Different page - use cross-page link
             target_page = self._get_page_for_item(target_name)
-            target_page_slug = self._generate_slug(target_page)
-            return f"[`{link_text}`]({target_page_slug}#{anchor_id})"
+            target_page_path = self._generate_file_path(target_page)
+            return f"[`{link_text}`]({target_page_path}#{anchor_id})"
 
-    def _format_code_block_with_links(self, code: str, language: str = "python") -> str:
-        """Format code block with deep linking using CodeBlock component."""
-        # Find documented objects in the code and create link mapping
+    def _format_code_block_with_links(self, code: str, language: str = "python", current_page: str = None) -> str:
+        """Format code block with deep linking using CodeBlock component.
+        
+        Extracts full dotted paths (e.g., nemo_rl.algorithms.dpo.MasterConfig) from the code
+        and creates direct links to them - no guessing or scoring needed.
+        """
+        import re
+        
         links = {}
-
-        # Look for documented class/function names in the code
-        # Iterate through all item types to find all items
-        for item_type in (
-            "package",
-            "module",
-            "class",
-            "function",
-            "method",
-            "data",
-            "attribute",
-            "property",
-        ):
-            for item in self._db.get_by_type(item_type):
-                full_name = item["full_name"]
-                short_name = full_name.split(".")[-1]
-
-                # Only link if the short name appears in the code AS A WHOLE WORD
-                import re
-
-                word_pattern = r"\b" + re.escape(short_name) + r"\b"
-                if re.search(word_pattern, code):
-                    # Link all documented items that appear in code
-                    page_name = self._get_page_for_item(full_name)
-                    page_slug = self._generate_slug(page_name)
-                    anchor_id = self._generate_anchor_id(full_name)
-                    links[short_name] = f"{page_slug}#{anchor_id}"
+        
+        # Pattern to match Python dotted paths (e.g., nemo_rl.algorithms.dpo.MasterConfig)
+        # Must start with a word boundary and consist of identifiers separated by dots
+        dotted_path_pattern = r'\b([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)+)\b'
+        
+        # Find all dotted paths in the code
+        for match in re.finditer(dotted_path_pattern, code):
+            full_path = match.group(1)
+            
+            # Try to find this exact path in our database
+            item = self.get_item(full_path)
+            if item:
+                # Found it! Create a link for the short name
+                short_name = full_path.split(".")[-1]
+                
+                # Check if this item is on the same page as the code block
+                if current_page and self._are_on_same_page(full_path, current_page):
+                    # Same page - use anchor-only link
+                    anchor_id = self._generate_anchor_id(full_path)
+                    links[short_name] = f"#{anchor_id}"
+                else:
+                    # Different page - use full cross-page link
+                    page_name = self._get_page_for_item(full_path)
+                    page_path = self._generate_file_path(page_name)
+                    anchor_id = self._generate_anchor_id(full_path)
+                    links[short_name] = f"{page_path}#{anchor_id}"
 
         # Generate CodeBlock component with links if any found
         if links:
-            links_json = (
-                "{" + ", ".join(f'"{k}": "{v}"' for k, v in links.items()) + "}"
-            )
-            return f"<CodeBlock\n  links={{{links_json}}}\n>\n\n```{language}\n{code}\n```\n\n</CodeBlock>"
+            links_json = ", ".join(f'"{k}": "{v}"' for k, v in links.items())
+            return f"<CodeBlock\n  links={{{{{links_json}}}}}\n>\n\n```{language}\n{code}\n```\n\n</CodeBlock>"
         else:
             return f"```{language}\n{code}\n```"
 
@@ -887,7 +947,7 @@ class FernRenderer(RendererBase):
     def _build_nav_item_recursive(self, item: ItemData) -> dict[str, t.Any] | None:
         """Build navigation item recursively following sphinx autodoc2 toctree logic."""
         full_name = item["full_name"]
-        slug = self._generate_slug(full_name)
+        file_path = self._generate_file_path(full_name)
 
         # Get children (same logic as sphinx toctrees)
         subpackages = list(self.get_children(item, {"package"}))
@@ -898,7 +958,7 @@ class FernRenderer(RendererBase):
             section_item = {
                 "section": full_name.split(".")[-1],  # Use short name for section
                 "skip-slug": True,
-                "path": f"{slug}{self.EXTENSION}",
+                "path": f"{file_path}{self.EXTENSION}",
                 "contents": [],
             }
 
@@ -910,11 +970,11 @@ class FernRenderer(RendererBase):
 
             # Add submodules as pages (maxdepth: 1 like sphinx)
             for child in sorted(submodules, key=lambda x: x["full_name"]):
-                child_slug = self._generate_slug(child["full_name"])
+                child_file_path = self._generate_file_path(child["full_name"])
                 section_item["contents"].append(
                     {
                         "page": child["full_name"].split(".")[-1],  # Use short name
-                        "path": f"{child_slug}{self.EXTENSION}",
+                        "path": f"{child_file_path}{self.EXTENSION}",
                     }
                 )
 
@@ -923,5 +983,5 @@ class FernRenderer(RendererBase):
             # Leaf item - just a page
             return {
                 "page": full_name.split(".")[-1],  # Use short name
-                "path": f"{slug}{self.EXTENSION}",
+                "path": f"{file_path}{self.EXTENSION}",
             }
