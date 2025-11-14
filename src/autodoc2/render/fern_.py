@@ -702,7 +702,7 @@ class FernRenderer(RendererBase):
         return content
 
     def _generate_slug(self, full_name: str) -> str:
-        """Generate slug from full dotted name: nemo_curator.utils.grouping → nemo-curator-utils-grouping"""
+        """Generate slug from full dotted name: mypackage.utils.helpers → mypackage-utils-helpers"""
         return full_name.replace(".", "-").replace("_", "-")
 
     def _generate_file_path(self, full_name: str) -> str:
@@ -710,9 +710,9 @@ class FernRenderer(RendererBase):
         
         Every item gets its own folder.
         Examples:
-        - nemo_rl → nemo_rl/nemo_rl/nemo_rl
-        - nemo_rl.algorithms → nemo_rl/algorithms/algorithms
-        - nemo_rl.algorithms.dpo → nemo_rl/algorithms/dpo/dpo
+        - mypackage → mypackage/mypackage/mypackage
+        - mypackage.utils → mypackage/utils/utils
+        - mypackage.utils.helpers → mypackage/utils/helpers/helpers
         """
         parts = full_name.split(".")
         # All parts as directories + last part as filename
@@ -793,14 +793,14 @@ class FernRenderer(RendererBase):
     def _format_code_block_with_links(self, code: str, language: str = "python", current_page: str = None) -> str:
         """Format code block with deep linking using CodeBlock component.
         
-        Extracts full dotted paths (e.g., nemo_rl.algorithms.dpo.MasterConfig) from the code
+        Extracts full dotted paths (e.g., mypackage.utils.helpers.MyClass) from the code
         and creates direct links to them - no guessing or scoring needed.
         """
         import re
         
         links = {}
         
-        # Pattern to match Python dotted paths (e.g., nemo_rl.algorithms.dpo.MasterConfig)
+        # Pattern to match Python dotted paths (e.g., mypackage.utils.helpers.MyClass)
         # Must start with a word boundary and consist of identifiers separated by dots
         dotted_path_pattern = r'\b([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)+)\b'
         

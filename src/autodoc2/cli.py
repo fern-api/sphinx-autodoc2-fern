@@ -268,7 +268,6 @@ def write(
             )
 
             # Create nested folder structure based on module path
-            # Every item gets its own folder: nemo_rl.algorithms -> nemo_rl/algorithms/algorithms.mdx
             parts = mod_name.split(".")
             # Create directory using all parts (full path)
             subdir = output / "/".join(parts)
