@@ -267,9 +267,14 @@ def write(
                 render_class(db, config, warn=_warn).render_item(mod_name)
             )
 
-            # Use hyphens in filenames to match Fern slugs
-            filename = mod_name.replace(".", "-").replace("_", "-")
-            out_path = output / (filename + render_class.EXTENSION)
+            # Create nested folder structure based on module path
+            parts = mod_name.split(".")
+            # Create directory using all parts (full path)
+            subdir = output / "/".join(parts)
+            subdir.mkdir(parents=True, exist_ok=True)
+            # File is named after the last part
+            out_path = subdir / (parts[-1] + render_class.EXTENSION)
+            
             paths.append(out_path)
             if out_path.exists() and out_path.read_text("utf8") == content:
                 # Don't write the file if it hasn't changed (optimization)
