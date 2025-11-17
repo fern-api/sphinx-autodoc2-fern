@@ -295,20 +295,20 @@ def write(
 
     if validation_results["errors"]:
         console.print(
-            f"[red]❌ {len(validation_results['errors'])} link errors found:[/red]"
+            f"[red]{len(validation_results['errors'])} link errors found:[/red]"
         )
         for error in validation_results["errors"]:
             console.print(f"  [red]• {error}[/red]")
 
     if validation_results["warnings"]:
         console.print(
-            f"[yellow]⚠️  {len(validation_results['warnings'])} link warnings:[/yellow]"
+            f"[yellow]{len(validation_results['warnings'])} link warnings:[/yellow]"
         )
         for warning in validation_results["warnings"]:
             console.print(f"  [yellow]• {warning}[/yellow]")
 
     if not validation_results["errors"] and not validation_results["warnings"]:
-        console.print("[green]✅ All links validated successfully![/green]")
+        console.print("[green] All links validated successfully[/green]")
 
     # remove any files that are no longer needed
     if clean:
