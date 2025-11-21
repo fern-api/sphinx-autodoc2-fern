@@ -106,15 +106,21 @@ class FernRenderer(RendererBase):
         yield "</Anchor>"
         yield ""
 
+        # Wrap all function content (docstring, params, returns) in Indent
         if self.show_docstring(item):
             raw_docstring = item.get("doc", "").strip()
             if raw_docstring:
+                yield "<Indent>"
+                yield ""
                 processed_docstring = self._convert_myst_directives(raw_docstring)
                 processed_docstring = self._bold_docstring_sections(processed_docstring)
                 processed_docstring = self._convert_args_to_paramfields(processed_docstring, item.get("args", []))
                 processed_docstring = self._convert_returns_to_list(processed_docstring)
                 escaped_docstring = self._escape_fern_content(processed_docstring)
                 yield escaped_docstring
+                yield ""
+                yield "</Indent>"
+                yield ""
 
     def render_module(self, item: ItemData) -> t.Iterable[str]:
         """Create the content for a module."""
@@ -291,13 +297,26 @@ class FernRenderer(RendererBase):
         # Build class signature with constructor args
         constructor = self.get_item(f"{full_name}.__init__")
         if constructor and "args" in constructor:
-            args = self.format_args(
-                constructor["args"], self.show_annotations(item), ignore_self="self"
-            )
-            if args.strip():
-                code_content = f"class {full_name}({args})"
-            else:
+            args_list = constructor["args"]
+            show_annotations = self.show_annotations(item)
+            
+            # Filter out 'self' to determine if there are real parameters
+            real_params = [arg for arg in args_list if arg[1] not in ("self", "cls")]
+            has_real_params = len(real_params) > 0
+            
+            if not has_real_params:
+                # No real parameters (empty or only self) - use inline format
                 code_content = f"class {full_name}"
+            else:
+                # Has real parameters - use multiline format
+                args_formatted = self._format_args_multiline(args_list, show_annotations, ignore_self="self")
+                code_lines = [f"class {full_name}("]
+                if args_formatted.strip():
+                    for line in args_formatted.split("\n"):
+                        if line.strip():
+                            code_lines.append(f"    {line.strip()}")
+                code_lines.append(")")
+                code_content = "\n".join(code_lines)
         else:
             code_content = f"class {full_name}"
 
@@ -311,7 +330,7 @@ class FernRenderer(RendererBase):
         yield "</Anchor>"
         yield ""
 
-        # Class content (wrapped in HTML div for proper indentation)
+        # Collect all class content first
         content_lines = []
 
         # Show inheritance if configured and available
@@ -345,39 +364,56 @@ class FernRenderer(RendererBase):
                     content_lines.append(escaped_init)
                     content_lines.append("")
 
-        if content_lines and any(line.strip() for line in content_lines):
-            for line in content_lines:
-                if line.strip():
-                    # Convert NOTE: and WARNING: to Fern components
-                    formatted_line = self._format_fern_callouts(line)
-                    yield formatted_line
-                else:
-                    yield ""
-
-        # Render class members (methods, properties, attributes)
-        for child in self.get_children(
+        # Get class members
+        children = list(self.get_children(
             item, {"class", "property", "attribute", "method"}
-        ):
-            # Skip __init__ if we merged its docstring above
-            if (
+        ))
+        
+        # Filter out __init__ if we merged its docstring above
+        children = [
+            child for child in children
+            if not (
                 child["full_name"].endswith(".__init__")
                 and self.config.class_docstring == "merge"
-            ):
-                continue
+            )
+        ]
+        
+        # Wrap ALL class content (own content + members) in ONE Indent block
+        has_any_content = (content_lines and any(line.strip() for line in content_lines)) or children
+        
+        if has_any_content:
+            yield "<Indent>"
+            yield ""
+            
+            # First, render the class's own content (bases, docstring, initialization)
+            if content_lines and any(line.strip() for line in content_lines):
+                for line in content_lines:
+                    if line.strip():
+                        # Convert NOTE: and WARNING: to Fern components
+                        formatted_line = self._format_fern_callouts(line)
+                        yield formatted_line
+                    else:
+                        yield ""
+            
+            # Then, render class members
+            if children:
+                for child in children:
+                    # Render each member with short names in code blocks
+                    child_item = self.get_item(child["full_name"])
+                    child_lines = list(self.render_item(child["full_name"]))
 
-            # Render each member with short names in code blocks
-            child_item = self.get_item(child["full_name"])
-            child_lines = list(self.render_item(child["full_name"]))
-
-            for line in child_lines:
-                # Convert full names in code blocks to short names for nested members
-                if child["full_name"] in line and "```" not in line:
-                    short_name = child["full_name"].split(".")[-1]
-                    # Replace the full name with short name in the line
-                    updated_line = line.replace(child["full_name"], short_name)
-                    yield updated_line
-                else:
-                    yield line
+                    for line in child_lines:
+                        # Convert full names in code blocks to short names for nested members
+                        if child["full_name"] in line and "```" not in line:
+                            short_name = child["full_name"].split(".")[-1]
+                            # Replace the full name with short name in the line
+                            updated_line = line.replace(child["full_name"], short_name)
+                            yield updated_line
+                        else:
+                            yield line
+            
+            yield "</Indent>"
+            yield ""
 
     def render_exception(self, item: ItemData) -> t.Iterable[str]:
         """Create the content for an exception."""
@@ -397,7 +433,7 @@ class FernRenderer(RendererBase):
         yield "```"
         yield ""
 
-        # Property content (wrapped in HTML div for proper indentation)
+        # Property content - collect it first
         content_lines = []
 
         # Show decorators if any
@@ -417,7 +453,7 @@ class FernRenderer(RendererBase):
                 content_lines.append(f"**Decorators**: {', '.join(decorator_list)}")
                 content_lines.append("")
 
-        # Property docstring - simple approach like MyST
+        # Property docstring
         if self.show_docstring(item):
             raw_docstring = item.get("doc", "").strip()
             if raw_docstring:
@@ -426,7 +462,10 @@ class FernRenderer(RendererBase):
                 escaped_docstring = self._escape_fern_content(processed_docstring)
                 content_lines.append(escaped_docstring)
 
+        # Wrap property content in Indent
         if content_lines and any(line.strip() for line in content_lines):
+            yield "<Indent>"
+            yield ""
             for line in content_lines:
                 if line.strip():
                     # Convert NOTE: and WARNING: to Fern components
@@ -434,7 +473,10 @@ class FernRenderer(RendererBase):
                     yield formatted_line
                 else:
                     yield ""
-        yield ""
+            yield "</Indent>"
+            yield ""
+        else:
+            yield ""
 
     def render_method(self, item: ItemData) -> t.Iterable[str]:
         """Create the content for a method."""
@@ -498,21 +540,24 @@ class FernRenderer(RendererBase):
             yield "</Anchor>"
             yield ""
             
-            # Show value for non-annotated data
-            if value is not None:
-                value_str = str(value)
-                if self._contains_jinja_template(value_str):
-                    if len(value_str.splitlines()) > 1 or len(value_str) > 100:
-                        yield "**Value**: `<Multiline-String>`"
-                    else:
-                        yield "**Value**:"
-                        yield "```jinja2"
-                        yield value_str
-                        yield "```"
+            # Always wrap data content in Indent (we always show value, even if None)
+            yield "<Indent>"
+            yield ""
+            
+            # Always show value (even if None) for consistency
+            value_str = str(value) if value is not None else "None"
+            if self._contains_jinja_template(value_str):
+                if len(value_str.splitlines()) > 1 or len(value_str) > 100:
+                    yield "**Value**: `<Multiline-String>`"
                 else:
-                    escaped_value = self._escape_fern_content(value_str)
-                    yield f"**Value**: `{escaped_value}`"
-                yield ""
+                    yield "**Value**:"
+                    yield "```jinja2"
+                    yield value_str
+                    yield "```"
+            else:
+                escaped_value = self._escape_fern_content(value_str)
+                yield f"**Value**: `{escaped_value}`"
+            yield ""
             
             # Show docstring
             if self.show_docstring(item):
@@ -523,6 +568,9 @@ class FernRenderer(RendererBase):
                     escaped_docstring = self._escape_fern_content(processed_docstring)
                     yield escaped_docstring
                     yield ""
+            
+            yield "</Indent>"
+            yield ""
 
     def generate_summary(
         self, objects: list[ItemData], alias: dict[str, str] | None = None
