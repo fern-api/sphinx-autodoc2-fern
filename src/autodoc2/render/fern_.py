@@ -152,8 +152,8 @@ class FernRenderer(RendererBase):
             yield ""
             for child in children_by_type["package"]:
                 name = child["full_name"].split(".")[-1]
-                # Create link using nested file path
-                file_path = self._generate_file_path(child["full_name"])
+                # Create relative link from current package to child package
+                file_path = self._generate_relative_file_path(item["full_name"], child["full_name"])
                 doc_summary = (
                     child.get("doc", "").split("\n")[0][:80] if child.get("doc") else ""
                 )
@@ -171,8 +171,8 @@ class FernRenderer(RendererBase):
             yield ""
             for child in children_by_type["module"]:
                 name = child["full_name"].split(".")[-1]
-                # Create link using nested file path
-                file_path = self._generate_file_path(child["full_name"])
+                # Create relative link from current module to child module
+                file_path = self._generate_relative_file_path(item["full_name"], child["full_name"])
                 doc_summary = (
                     child.get("doc", "").split("\n")[0][:80] if child.get("doc") else ""
                 )
@@ -896,6 +896,41 @@ class FernRenderer(RendererBase):
         parts = full_name.split(".")
         # All parts as directories + last part as filename
         return "/".join(parts) + "/" + parts[-1]
+    
+    def _generate_relative_file_path(self, from_full_name: str, to_full_name: str) -> str:
+        """Generate relative file path between two items.
+        
+        Args:
+            from_full_name: The full name of the current item (where the link is)
+            to_full_name: The full name of the target item (what we're linking to)
+        
+        Returns:
+            Relative path from current item to target item
+        
+        Examples:
+            from nemo_rl.converters to nemo_rl.converters.huggingface → huggingface/huggingface
+            from nemo_rl to nemo_rl.converters → converters/converters
+        """
+        from_parts = from_full_name.split(".")
+        to_parts = to_full_name.split(".")
+        
+        # Find common prefix
+        common_length = 0
+        for i, (f, t) in enumerate(zip(from_parts, to_parts)):
+            if f == t:
+                common_length = i + 1
+            else:
+                break
+        
+        # Get the unique parts of the target path (after the common prefix)
+        unique_to_parts = to_parts[common_length:]
+        
+        # Build the relative path: unique parts as directories + last part as filename
+        if unique_to_parts:
+            return "/".join(unique_to_parts) + "/" + unique_to_parts[-1]
+        else:
+            # They're the same, shouldn't happen but handle gracefully
+            return to_parts[-1] + "/" + to_parts[-1]
 
     def _generate_anchor_id(self, full_name: str) -> str:
         """Generate anchor ID from full_name for use in <Anchor> components."""
