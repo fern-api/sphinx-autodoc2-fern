@@ -152,17 +152,17 @@ class FernRenderer(RendererBase):
             yield ""
             for child in children_by_type["package"]:
                 name = child["full_name"].split(".")[-1]
-                # Create relative link from current package to child package
-                file_path = self._generate_relative_file_path(item["full_name"], child["full_name"])
+                # Use absolute slug for linking (canonical Fern identifier)
+                slug = self._generate_slug(child["full_name"])
                 doc_summary = (
                     child.get("doc", "").split("\n")[0][:80] if child.get("doc") else ""
                 )
                 if len(child.get("doc", "")) > 80:
                     doc_summary += "..."
                 yield (
-                    f"- **[`{name}`]({file_path})** - {doc_summary}"
+                    f"- **[`{name}`]({slug})** - {doc_summary}"
                     if doc_summary
-                    else f"- **[`{name}`]({file_path})**"
+                    else f"- **[`{name}`]({slug})**"
                 )
             yield ""
 
@@ -171,17 +171,17 @@ class FernRenderer(RendererBase):
             yield ""
             for child in children_by_type["module"]:
                 name = child["full_name"].split(".")[-1]
-                # Create relative link from current module to child module
-                file_path = self._generate_relative_file_path(item["full_name"], child["full_name"])
+                # Use absolute slug for linking (canonical Fern identifier)
+                slug = self._generate_slug(child["full_name"])
                 doc_summary = (
                     child.get("doc", "").split("\n")[0][:80] if child.get("doc") else ""
                 )
                 if len(child.get("doc", "")) > 80:
                     doc_summary += "..."
                 yield (
-                    f"- **[`{name}`]({file_path})** - {doc_summary}"
+                    f"- **[`{name}`]({slug})** - {doc_summary}"
                     if doc_summary
-                    else f"- **[`{name}`]({file_path})**"
+                    else f"- **[`{name}`]({slug})**"
                 )
             yield ""
 
@@ -889,7 +889,7 @@ class FernRenderer(RendererBase):
         
         Every item gets its own folder.
         Examples:
-        - mypackage → mypackage/mypackage/mypackage
+        - mypackage → mypackage/mypackage
         - mypackage.utils → mypackage/utils/utils
         - mypackage.utils.helpers → mypackage/utils/helpers/helpers
         """
@@ -905,11 +905,14 @@ class FernRenderer(RendererBase):
             to_full_name: The full name of the target item (what we're linking to)
         
         Returns:
-            Relative path from current item to target item
+            Relative path from current item to target item (just the directory path)
         
         Examples:
-            from nemo_rl.converters to nemo_rl.converters.huggingface → huggingface/huggingface
-            from nemo_rl to nemo_rl.converters → converters/converters
+            from nemo_rl.converters to nemo_rl.converters.huggingface → huggingface
+            from nemo_rl to nemo_rl.converters → converters
+        
+        Note: Returns just the directory name, not the full file path with duplication.
+        The actual file is at huggingface/huggingface.mdx but we link to just "huggingface"
         """
         from_parts = from_full_name.split(".")
         to_parts = to_full_name.split(".")
@@ -925,12 +928,15 @@ class FernRenderer(RendererBase):
         # Get the unique parts of the target path (after the common prefix)
         unique_to_parts = to_parts[common_length:]
         
-        # Build the relative path: unique parts as directories + last part as filename
+        # Build the relative path: just the unique parts WITHOUT the file duplication
+        # File is at: unique_parts/last_part.mdx
+        # But we link to: unique_parts (directory only)
         if unique_to_parts:
-            return "/".join(unique_to_parts) + "/" + unique_to_parts[-1]
+            # Return just the directory path (all unique parts)
+            return "/".join(unique_to_parts)
         else:
             # They're the same, shouldn't happen but handle gracefully
-            return to_parts[-1] + "/" + to_parts[-1]
+            return to_parts[-1]
 
     def _generate_anchor_id(self, full_name: str) -> str:
         """Generate anchor ID from full_name for use in <Anchor> components."""
