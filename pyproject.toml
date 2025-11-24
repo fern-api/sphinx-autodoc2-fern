@@ -23,7 +23,8 @@ dependencies = [
     "tomli; python_version<'3.11'",
     "typing-extensions",
     "typer[all]",
-    "PyYAML"
+    "PyYAML",
+    "docstring-parser>=0.15"
 ]
 
 [project.optional-dependencies]
