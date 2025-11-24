@@ -1,6 +1,7 @@
 """CLI for the package."""
 
 from pathlib import Path
+import logging
 import re
 import typing as t
 
@@ -186,6 +187,21 @@ def analyse_all(
     console.print("[green]Done![/green]")
 
 
+class ColoredWarningHandler(logging.Handler):
+    """Custom logging handler that prints warnings in yellow using rich console."""
+    def __init__(self, console: Console):
+        super().__init__()
+        self.console = console
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            msg = self.format(record)
+            # Print on a new line to avoid conflicts with progress bars
+            self.console.print(f"\n[yellow]{msg}[/yellow]")
+        except Exception:
+            self.handleError(record)
+
+
 @app_main.command("write")
 def write(
     path: Path = typer.Argument(..., exists=True, help="Path to analyse"),
@@ -198,8 +214,20 @@ def write(
     # TODO read from config file, to populate config object
     output: Path = typer.Option("_autodoc", help="Folder to write to"),
     clean: bool = typer.Option(False, "-c", "--clean", help="Remove old files"),
+    debug: bool = typer.Option(False, "-d", "--debug", help="Enable debug logging (shows missing type annotation warnings)"),
 ) -> None:
     """Create Fern markdown files for a python module or package."""
+    # Configure logging based on debug flag
+    if debug:
+        # Set up colored warning handler
+        logger = logging.getLogger()
+        logger.setLevel(logging.WARNING)
+        handler = ColoredWarningHandler(console)
+        handler.setFormatter(logging.Formatter('%(message)s'))
+        logger.addHandler(handler)
+    else:
+        # Suppress warnings by default
+        logging.basicConfig(level=logging.ERROR, format='%(message)s')
     # gather the module
     modules: t.Iterable[t.Tuple[Path, str]]
     if path.is_dir():
