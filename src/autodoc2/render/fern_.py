@@ -501,8 +501,12 @@ class FernRenderer(RendererBase):
         if is_class_attribute and has_annotation:
             type_str = self.format_annotation(item["annotation"])
 
-            # Build simple code block: name: Type
-            code_line = f"{short_name}: {type_str}"
+            # Build simple code block: name: Type or name: Type = value
+            if value is not None:
+                code_line = f"{short_name}: {type_str} = {value}"
+            else:
+                code_line = f"{short_name}: {type_str}"
+
             current_page = self._link_generator.get_page_for_item(full_name)
             formatted_code = self._link_generator.format_code_block_with_links(code_line, "python", current_page, current_item=full_name)
             for line in formatted_code.split("\n"):
@@ -550,43 +554,20 @@ class FernRenderer(RendererBase):
             yield "</Anchor>"
             yield ""
         else:
-            code_content = f"{full_name}"
+            # Data without type annotation (e.g., enum members, old-style constants)
+            # Show as simple inline code block: NAME = value
+            if value is not None:
+                code_line = f"{short_name} = {value}"
+            else:
+                # No value - just show the name
+                code_line = short_name
+
             current_page = self._link_generator.get_page_for_item(full_name)
-            formatted_code = self._link_generator.format_code_block_with_links(code_content, "python", current_page, current_item=full_name)
+            formatted_code = self._link_generator.format_code_block_with_links(code_line, "python", current_page, current_item=full_name)
             for line in formatted_code.split("\n"):
                 yield line
-            
+
             yield "</Anchor>"
-            yield ""
-            
-            # Always wrap data content in Indent (we always show value, even if None)
-            yield "<Indent>"
-            yield ""
-            
-            # Always show value (even if None) for consistency
-            value_str = str(value) if value is not None else "None"
-            if self._contains_jinja_template(value_str):
-                if len(value_str.splitlines()) > 1 or len(value_str) > 100:
-                    yield "**Value**: `<Multiline-String>`"
-                else:
-                    yield "**Value**:"
-                    yield "```jinja2"
-                    yield value_str
-                    yield "```"
-            else:
-                escaped_value = self._escape_fern_content(value_str)
-                yield f"**Value**: `{escaped_value}`"
-            yield ""
-            
-            # Show docstring
-            if self.show_docstring(item):
-                raw_docstring = item.get("doc", "").strip()
-                if raw_docstring:
-                    processed_docstring = self._process_docstring(raw_docstring, current_item=full_name)
-                    yield processed_docstring
-                    yield ""
-            
-            yield "</Indent>"
             yield ""
 
     def _process_docstring(
